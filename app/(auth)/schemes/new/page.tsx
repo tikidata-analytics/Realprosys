@@ -287,7 +287,7 @@ export default function NewSchemePage() {
             </div>
 
             {/* Summary */}
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-3 text-sm">
+            <div className="grid grid-cols-2 md:grid-cols-6 gap-3 text-sm">
               <div className="bg-white rounded-lg px-3 py-2">
                 <div className="text-xs text-slate-500">Total Tagihan</div>
                 <div className="font-bold text-indigo-900">{formatCurrency(preview.housePrice)}</div>
@@ -303,16 +303,20 @@ export default function NewSchemePage() {
                     <div className="font-bold text-blue-700">{formatCurrency(preview.kprAmount)} <span className="text-xs font-normal text-blue-500">({preview.kprPct}%)</span></div>
                   </div>
                   <div className="bg-white rounded-lg px-3 py-2">
+                    <div className="text-xs text-slate-500">Tenor</div>
+                    <div className="font-bold text-blue-700">{preview.kprTenor / 12} tahun</div>
+                  </div>
+                  <div className="bg-white rounded-lg px-3 py-2">
                     <div className="text-xs text-slate-500">Total Pokok KPR</div>
                     <div className="font-bold text-blue-700">{formatCurrency(preview.totalKprPrincipal)}</div>
                   </div>
                   <div className="bg-white rounded-lg px-3 py-2">
-                  <div className="text-xs text-slate-500">Total Bunga KPR</div>
-                  <div className="font-bold text-blue-700">{formatCurrency(preview.totalKprInterest)} <span className="text-xs font-normal text-blue-500">({preview.housePrice > 0 ? Math.round(preview.totalKprInterest / preview.housePrice * 100 * 100) / 100 : 0}%)</span></div>
+                    <div className="text-xs text-slate-500">Total Bunga KPR</div>
+                    <div className="font-bold text-blue-700">{formatCurrency(preview.totalKprInterest)} <span className="text-xs font-normal text-blue-500">({preview.housePrice > 0 ? Math.round(preview.totalKprInterest / preview.housePrice * 100 * 100) / 100 : 0}%)</span></div>
                   </div>
                 </>
               ) : (
-                <div className="col-span-3 bg-amber-50 rounded-lg px-3 py-2 border border-amber-200">
+                <div className="col-span-4 bg-amber-50 rounded-lg px-3 py-2 border border-amber-200">
                   <div className="text-xs text-amber-600">Tanpa KPR</div>
                   <div className="font-bold text-amber-800">Cash / Pelunasan bertahap</div>
                 </div>
@@ -382,7 +386,7 @@ export default function NewSchemePage() {
             {preview.kprSchedule.length > 0 && (
               <div className="bg-white rounded-xl shadow-sm overflow-hidden">
                 <div className="px-4 py-3 border-b border-slate-200">
-                  <h3 className="font-semibold text-slate-800">Jadwal Pembayaran KPR — Tenor {preview.kprTenor / 12} tahun</h3>
+                  <h3 className="font-semibold text-slate-800">Jadwal Pembayaran KPR</h3>
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-xs">
