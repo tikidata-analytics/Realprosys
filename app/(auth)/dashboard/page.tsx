@@ -22,9 +22,14 @@ export default function DashboardPage() {
 
   return (
     <div>
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold text-slate-900">Dashboard</h2>
-        <p className="text-slate-500 mt-1">Selamat datang di Realprosys</p>
+      <div className="mb-6 flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold text-slate-900">Dashboard</h2>
+          <p className="text-slate-500 mt-1">Selamat datang di Realprosys</p>
+        </div>
+        <a href="/profile" className="text-sm text-indigo-600 hover:text-indigo-800 font-medium">
+          Edit Profil
+        </a>
       </div>
 
       {stats ? (
