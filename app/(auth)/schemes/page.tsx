@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { formatDate, parseSort, toggleSort } from "@/lib/formatters";
 
 interface Scheme {
   id: string;
@@ -13,20 +14,37 @@ interface Scheme {
   created_at: string;
 }
 
+const PAGE_SIZE = 10;
+
 export default function SchemesPage() {
   const [schemes, setSchemes] = useState<Scheme[]>([]);
+  const [sort, setSort] = useState("created_at:desc");
+  const [page, setPage] = useState(1);
 
   useEffect(() => {
-    fetch("/api/schemes")
-      .then((r) => r.json())
-      .then((data) => setSchemes(data))
-      .catch(console.error);
+    fetch("/api/schemes").then((r) => r.json()).then((data) => setSchemes(data)).catch(console.error);
   }, []);
+
+  const sorted = [...schemes].sort((a, b) => {
+    const { orderBy, orderDir } = parseSort(sort);
+    const va = (a as any)[orderBy] ?? "";
+    const vb = (b as any)[orderBy] ?? "";
+    const cmp = String(va).localeCompare(String(vb), "id");
+    return orderDir === "asc" ? cmp : -cmp;
+  });
+  const totalPages = Math.ceil(sorted.length / PAGE_SIZE) || 1;
+  const paginated = sorted.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const handleDelete = async (id: string) => {
     if (!confirm("Hapus skema ini?")) return;
     await fetch(`/api/schemes/${id}`, { method: "DELETE" });
     setSchemes(schemes.filter((s) => s.id !== id));
+  };
+
+  const sortIcon = (field: string) => {
+    const { orderBy, orderDir } = parseSort(sort);
+    if (orderBy !== field) return <span className="text-xs text-slate-300">↕</span>;
+    return <span className="text-xs text-indigo-600">{orderDir === "asc" ? "↑" : "↓"}</span>;
   };
 
   return (
@@ -45,35 +63,55 @@ export default function SchemesPage() {
             Belum ada skema. <Link href="/schemes/new" className="text-indigo-600 hover:underline">Buat skema baru</Link>
           </div>
         ) : (
-          <table className="w-full text-sm">
-            <thead className="bg-slate-50 border-b border-slate-200">
-              <tr>
-                <th className="text-left px-4 py-3 font-medium text-slate-600">Nama Skema</th>
-                <th className="text-left px-4 py-3 font-medium text-slate-600">Pelanggan</th>
-                <th className="text-left px-4 py-3 font-medium text-slate-600">Produk</th>
-                <th className="text-left px-4 py-3 font-medium text-slate-600">Rencana</th>
-                <th className="text-left px-4 py-3 font-medium text-slate-600">Booking Date</th>
-                <th className="text-right px-4 py-3 font-medium text-slate-600">Aksi</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {schemes.map((s) => (
-                <tr key={s.id} className="hover:bg-slate-50">
-                  <td className="px-4 py-3 font-medium text-slate-900">{s.name}</td>
-                  <td className="px-4 py-3 text-slate-600">{s.customer_name}</td>
-                  <td className="px-4 py-3 text-slate-600">{s.product_name}</td>
-                  <td className="px-4 py-3 text-slate-600">{s.payment_plan_name}</td>
-                  <td className="px-4 py-3 text-slate-600">{new Date(s.booking_date).toLocaleDateString("id-ID")}</td>
-                  <td className="px-4 py-3 text-right">
-                    <Link href={`/schemes/${s.id}`}
-                      className="px-3 py-1 text-xs text-indigo-600 hover:bg-indigo-50 rounded-lg mr-2">Lihat</Link>
-                    <button onClick={() => handleDelete(s.id)}
-                      className="px-3 py-1 text-xs text-red-600 hover:bg-red-50 rounded-lg">Hapus</button>
-                  </td>
+          <>
+            <table className="w-full text-sm">
+              <thead className="bg-slate-50 border-b border-slate-200">
+                <tr>
+                  <th className="text-left px-4 py-3 font-medium text-slate-600 cursor-pointer select-none hover:bg-slate-100" onClick={() => { setSort(toggleSort(sort, "name")); setPage(1); }}>
+                    <span className="flex items-center gap-1">Nama Skema {sortIcon("name")}</span>
+                  </th>
+                  <th className="text-left px-4 py-3 font-medium text-slate-600 cursor-pointer select-none hover:bg-slate-100" onClick={() => { setSort(toggleSort(sort, "customer_name")); setPage(1); }}>
+                    <span className="flex items-center gap-1">Pelanggan {sortIcon("customer_name")}</span>
+                  </th>
+                  <th className="text-left px-4 py-3 font-medium text-slate-600 cursor-pointer select-none hover:bg-slate-100" onClick={() => { setSort(toggleSort(sort, "product_name")); setPage(1); }}>
+                    <span className="flex items-center gap-1">Produk {sortIcon("product_name")}</span>
+                  </th>
+                  <th className="text-left px-4 py-3 font-medium text-slate-600 cursor-pointer select-none hover:bg-slate-100" onClick={() => { setSort(toggleSort(sort, "payment_plan_name")); setPage(1); }}>
+                    <span className="flex items-center gap-1">Rencana {sortIcon("payment_plan_name")}</span>
+                  </th>
+                  <th className="text-left px-4 py-3 font-medium text-slate-600 cursor-pointer select-none hover:bg-slate-100" onClick={() => { setSort(toggleSort(sort, "booking_date")); setPage(1); }}>
+                    <span className="flex items-center gap-1">Tgl Booking {sortIcon("booking_date")}</span>
+                  </th>
+                  <th className="text-right px-4 py-3 font-medium text-slate-600">Aksi</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {paginated.map((s) => (
+                  <tr key={s.id} className="hover:bg-slate-50">
+                    <td className="px-4 py-3 font-medium text-slate-900">{s.name}</td>
+                    <td className="px-4 py-3 text-slate-600">{s.customer_name}</td>
+                    <td className="px-4 py-3 text-slate-600">{s.product_name}</td>
+                    <td className="px-4 py-3 text-slate-600">{s.payment_plan_name}</td>
+                    <td className="px-4 py-3 text-slate-600">{formatDate(s.booking_date)}</td>
+                    <td className="px-4 py-3 text-right">
+                      <Link href={`/schemes/${s.id}`} className="px-3 py-1 text-xs text-indigo-600 hover:bg-indigo-50 rounded-lg mr-2">Lihat</Link>
+                      <button onClick={() => handleDelete(s.id)} className="px-3 py-1 text-xs text-red-600 hover:bg-red-50 rounded-lg">Hapus</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <div className="flex items-center justify-between px-4 py-3 border-t border-slate-200 text-sm text-slate-500">
+              <span>{(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, schemes.length)} dari {schemes.length}</span>
+              <div className="flex gap-1">
+                <button disabled={page === 1} onClick={() => setPage(1)} className="px-2 py-1 rounded hover:bg-slate-100 disabled:opacity-30">«</button>
+                <button disabled={page === 1} onClick={() => setPage(page - 1)} className="px-2 py-1 rounded hover:bg-slate-100 disabled:opacity-30">‹</button>
+                <span className="px-3 py-1">{page}/{totalPages}</span>
+                <button disabled={page === totalPages} onClick={() => setPage(page + 1)} className="px-2 py-1 rounded hover:bg-slate-100 disabled:opacity-30">›</button>
+                <button disabled={page === totalPages} onClick={() => setPage(totalPages)} className="px-2 py-1 rounded hover:bg-slate-100 disabled:opacity-30">»</button>
+              </div>
+            </div>
+          </>
         )}
       </div>
     </div>
