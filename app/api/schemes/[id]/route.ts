@@ -21,6 +21,21 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   } catch { return NextResponse.json({ error: "Failed" }, { status: 500 }); }
 }
 
+export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const userId = req.headers.get("x-user-id");
+  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const { id } = await params;
+  try {
+    const { name } = await req.json();
+    const result = await pool.query(
+      "UPDATE schemes SET name=COALESCE(NULLIF($1,''),name) WHERE id=$2 AND user_id=$3 RETURNING *",
+      [name, id, userId]
+    );
+    if (result.rows.length === 0) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    return NextResponse.json(result.rows[0]);
+  } catch { return NextResponse.json({ error: "Failed" }, { status: 500 }); }
+}
+
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const userId = req.headers.get("x-user-id");
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

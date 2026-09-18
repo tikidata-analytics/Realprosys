@@ -16,8 +16,8 @@ export async function verifyPassword(
   return bcrypt.compare(password, hash);
 }
 
-export async function createToken(userId: string): Promise<string> {
-  return new SignJWT({ userId })
+export async function createToken(userId: string, tokenVersion: number): Promise<string> {
+  return new SignJWT({ userId, tokenVersion })
     .setProtectedHeader({ alg: "HS256" })
     .setExpirationTime("7d")
     .setIssuedAt()
@@ -26,10 +26,13 @@ export async function createToken(userId: string): Promise<string> {
 
 export async function verifyToken(
   token: string
-): Promise<{ userId: string } | null> {
+): Promise<{ userId: string; tokenVersion: number } | null> {
   try {
     const { payload } = await jwtVerify(token, SECRET);
-    return { userId: payload.userId as string };
+    return {
+      userId: payload.userId as string,
+      tokenVersion: (payload.tokenVersion as number) || 1,
+    };
   } catch {
     return null;
   }

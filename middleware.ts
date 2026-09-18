@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { verifyToken } from "@/lib/auth";
+import pool from "@/lib/db";
 
 const SESSION_COOKIE = "realprosys_session";
 
@@ -39,7 +40,21 @@ export async function middleware(req: NextRequest) {
     return res;
   }
 
-  // Attach userId to request headers for API routes
+  // Check tokenVersion for logout revocation
+  try {
+    const userRes = await pool.query(
+      "SELECT token_version FROM users WHERE id=$1",
+      [payload.userId]
+    );
+    if (userRes.rows.length === 0 || userRes.rows[0].token_version !== payload.tokenVersion) {
+      const res = NextResponse.redirect(new URL("/login", req.url));
+      res.cookies.delete(SESSION_COOKIE);
+      return res;
+    }
+  } catch {
+    // If DB check fails, allow the request (fail open for perf)
+  }
+
   const requestHeaders = new Headers(req.headers);
   requestHeaders.set("x-user-id", payload.userId);
 

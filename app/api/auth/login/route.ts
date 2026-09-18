@@ -1,10 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import pool from "@/lib/db";
 import { verifyPassword, createToken } from "@/lib/auth";
+import { rateLimit } from "@/lib/rate-limit";
 
 const SESSION_COOKIE = "realprosys_session";
 
 export async function POST(req: NextRequest) {
+  const ip = req.headers.get("x-forwarded-for") || "unknown";
+  const rl = rateLimit(`auth-login:${ip}`);
+  if (!rl.allowed) {
+    return NextResponse.json({ error: "Terlalu banyak percobaan. Coba lagi dalam 15 menit." }, { status: 429 });
+  }
+
   try {
     const { email, password } = await req.json();
 
@@ -30,7 +37,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Email atau password salah" }, { status: 401 });
     }
 
-    const token = await createToken(user.id);
+    const tokenVersion = user.token_version || 1;
+    const token = await createToken(user.id, tokenVersion);
     const res = NextResponse.json({
       user: { id: user.id, email: user.email, name: user.name },
     });
