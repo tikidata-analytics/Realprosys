@@ -36,17 +36,17 @@ export default function KprChart({ schedule }: KprChartProps) {
 
   const scaleX = (i: number) => PL + (i / (sampled.length - 1)) * chartW;
 
-  // X axis labels
+  // X axis: show only year
   const xLabels: { x: number; label: string }[] = [];
   const xStep = Math.max(1, Math.floor(sampled.length / 6));
   for (let i = 0; i < sampled.length; i += xStep) {
     const d = new Date(sampled[i].due_date);
-    xLabels.push({ x: scaleX(i), label: d.toLocaleDateString("id-ID", { day: "2-digit", month: "short" }) });
+    xLabels.push({ x: scaleX(i), label: String(d.getFullYear()) });
   }
   const lastIdx = sampled.length - 1;
   if (!xLabels.find(l => l.x === scaleX(lastIdx))) {
     const d = new Date(sampled[lastIdx].due_date);
-    xLabels.push({ x: scaleX(lastIdx), label: d.toLocaleDateString("id-ID", { day: "2-digit", month: "short" }) });
+    xLabels.push({ x: scaleX(lastIdx), label: String(d.getFullYear()) });
   }
 
   // ---- Chart: Pokok vs Bunga ----
