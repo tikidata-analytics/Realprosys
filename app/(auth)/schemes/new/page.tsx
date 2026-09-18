@@ -376,7 +376,7 @@ export default function NewSchemePage() {
             )}
 
             {/* KPR chart — placed between Non-KPR and KPR tables */}
-            {preview.kprAmount > 0 && <KprChart schedule={preview.kprSchedule} />}
+            {preview.kprAmount > 0 && <KprChart schedule={preview.kprSchedule.map((r: any) => ({ ...r, remaining_balance: r.setelah_pengurangan }))} />}
 
             {/* KPR Schedule */}
             {preview.kprSchedule.length > 0 && (

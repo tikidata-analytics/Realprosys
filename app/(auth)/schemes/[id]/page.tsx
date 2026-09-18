@@ -159,7 +159,7 @@ export default function SchemeDetailPage() {
 
       {/* KPR Chart */}
       {sched.kprAmount > 0 && sched.kprSchedule && (
-        <KprChart schedule={sched.kprSchedule} />
+        <KprChart schedule={sched.kprSchedule.map((r: any) => ({ ...r, remaining_balance: r.setelah_pengurangan }))} />
       )}
     </div>
   );
