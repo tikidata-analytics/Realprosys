@@ -1,14 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
 import pool from "@/lib/db";
+import { generateId } from "@/lib/auth";
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const userId = req.headers.get("x-user-id");
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const { id } = await params;
   try {
-    const result = await pool.query("SELECT id, user_id, name, down_payment_pct, loan_tenor_years, interest_rate, created_at FROM payment_plans WHERE id=$1 AND user_id=$2", [id, userId]);
-    if (result.rows.length === 0) return NextResponse.json({ error: "Not found" }, { status: 404 });
-    return NextResponse.json(result.rows[0]);
+    const plan = await pool.query(
+      "SELECT id, user_id, name, created_at FROM payment_plans WHERE id=$1 AND user_id=$2",
+      [id, userId]
+    );
+    if (plan.rows.length === 0) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+    const stages = await pool.query(
+      `SELECT id, payment_plan_id, stage_type, stage_order, amount_type, stage_value, interval_months, created_at
+       FROM payment_stages WHERE payment_plan_id=$1 ORDER BY stage_order`,
+      [id]
+    );
+
+    return NextResponse.json({ ...plan.rows[0], stages: stages.rows });
   } catch { return NextResponse.json({ error: "Failed" }, { status: 500 }); }
 }
 
@@ -17,13 +28,55 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const { id } = await params;
   try {
-    const { name, down_payment_pct, loan_tenor_years, interest_rate } = await req.json();
-    const result = await pool.query(
-      "UPDATE payment_plans SET name=COALESCE($1,name), down_payment_pct=COALESCE($2,down_payment_pct), loan_tenor_years=COALESCE($3,loan_tenor_years), interest_rate=COALESCE($4,interest_rate) WHERE id=$5 AND user_id=$6 RETURNING *",
-      [name, down_payment_pct, loan_tenor_years, interest_rate, id, userId]
-    );
-    if (result.rows.length === 0) return NextResponse.json({ error: "Not found" }, { status: 404 });
-    return NextResponse.json(result.rows[0]);
+    const { name, stages } = await req.json();
+
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+
+      const existing = await client.query(
+        "SELECT id FROM payment_plans WHERE id=$1 AND user_id=$2",
+        [id, userId]
+      );
+      if (existing.rows.length === 0) {
+        await client.query("ROLLBACK");
+        return NextResponse.json({ error: "Not found" }, { status: 404 });
+      }
+
+      if (name != null) {
+        await client.query("UPDATE payment_plans SET name=$1 WHERE id=$2", [name, id]);
+      }
+
+      if (stages != null) {
+        await client.query("DELETE FROM payment_stages WHERE payment_plan_id=$1", [id]);
+        for (const stage of stages) {
+          if (!stage.stage_type || stage.amount_type == null) continue;
+          const stageId = generateId();
+          await client.query(
+            `INSERT INTO payment_stages (id, payment_plan_id, stage_type, stage_order, amount_type, stage_value, interval_months)
+             VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+            [
+              stageId, id,
+              stage.stage_type,
+              stage.stage_order ?? 0,
+              stage.amount_type,
+              stage.stage_value ?? null,
+              stage.interval_months ?? 0,
+            ]
+          );
+        }
+      }
+
+      await client.query("COMMIT");
+      const updated = await pool.query("SELECT id, user_id, name, created_at FROM payment_plans WHERE id=$1", [id]);
+      const updatedStages = await pool.query("SELECT * FROM payment_stages WHERE payment_plan_id=$1 ORDER BY stage_order", [id]);
+      return NextResponse.json({ ...updated.rows[0], stages: updatedStages.rows });
+    } catch (err) {
+      await client.query("ROLLBACK");
+      throw err;
+    } finally {
+      client.release();
+    }
   } catch { return NextResponse.json({ error: "Failed" }, { status: 500 }); }
 }
 

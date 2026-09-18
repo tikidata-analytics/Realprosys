@@ -8,7 +8,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   try {
     const result = await pool.query(
       `SELECT s.*, c.name as customer_name, p.name as product_name, p.type as product_type, p.price as product_price,
-              pp.name as payment_plan_name, pp.interest_rate, pp.down_payment_pct, pp.loan_tenor_years
+              pp.name as payment_plan_name
        FROM schemes s
        JOIN customers c ON s.customer_id = c.id
        JOIN products p ON s.product_id = p.id

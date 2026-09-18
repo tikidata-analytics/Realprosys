@@ -1,14 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import pool from "@/lib/db";
 import { generateId } from "@/lib/auth";
-import { calculateAmortization } from "@/lib/amortization";
 
 export async function GET(req: NextRequest) {
   const userId = req.headers.get("x-user-id");
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   try {
     const result = await pool.query(
-      `SELECT s.*, c.name as customer_name, p.name as product_name, pp.name as payment_plan_name, pp.interest_rate, pp.down_payment_pct, pp.loan_tenor_years
+      `SELECT s.*, c.name as customer_name, p.name as product_name, pp.name as payment_plan_name
        FROM schemes s
        JOIN customers c ON s.customer_id = c.id
        JOIN products p ON s.product_id = p.id
@@ -29,29 +28,116 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "All fields required" }, { status: 400 });
     }
 
-    // Get product and payment plan
-    const [productRes, planRes] = await Promise.all([
-      pool.query("SELECT * FROM products WHERE id=$1 AND user_id=$2", [product_id, userId]),
-      pool.query("SELECT * FROM payment_plans WHERE id=$1 AND user_id=$2", [payment_plan_id, userId]),
-    ]);
+    // Get product
+    const productRes = await pool.query("SELECT * FROM products WHERE id=$1 AND user_id=$2", [product_id, userId]);
+    if (productRes.rows.length === 0) return NextResponse.json({ error: "Invalid product" }, { status: 400 });
 
-    if (productRes.rows.length === 0 || planRes.rows.length === 0) {
-      return NextResponse.json({ error: "Invalid product or payment plan" }, { status: 400 });
+    // Get plan with stages
+    const planRes = await pool.query(
+      `SELECT pp.*, COALESCE(json_agg(ps.* ORDER BY ps.stage_order) FILTER (WHERE ps.id IS NOT NULL), '[]') as stages
+       FROM payment_plans pp
+       LEFT JOIN payment_stages ps ON ps.payment_plan_id = pp.id
+       WHERE pp.id=$1 AND pp.user_id=$2
+       GROUP BY pp.id`,
+      [payment_plan_id, userId]
+    );
+    if (planRes.rows.length === 0) return NextResponse.json({ error: "Invalid payment plan" }, { status: 400 });
+
+    const plan = planRes.rows[0];
+    const stages: any[] = plan.stages || [];
+    const housePrice = Number(productRes.rows[0].price);
+
+    // ─── Calculate each stage amount ───
+    let otherStagesTotal = 0;
+    let kprAmount = 0;
+    let kprRate = 0;
+    let kprTenor = 0;
+    const scheduleRows: any[] = [];
+
+    // Sort stages by stage_order
+    const sortedStages = [...stages].sort((a, b) => a.stage_order - b.stage_order);
+
+    let currentDate = new Date(booking_date);
+
+    for (const stage of sortedStages) {
+      const stageType: string = stage.stage_type;
+      const amountType: string = stage.amount_type;
+      const value = Number(stage.stage_value || 0);
+      const intervalMonths = Number(stage.interval_months || 0);
+
+      if (stageType === "KPR") {
+        kprRate = value; // for KPR, stage_value = interest_rate
+        kprTenor = intervalMonths; // interval_months = tenor in years for KPR
+        continue; // KPR amount calculated after all others
+      }
+
+      let amount = 0;
+      if (amountType === "PERCENTAGE") {
+        amount = housePrice * value / 100;
+      } else {
+        amount = value;
+      }
+
+      otherStagesTotal += amount;
+
+      // Advance date by interval
+      if (intervalMonths > 0) {
+        currentDate = new Date(currentDate);
+        currentDate.setMonth(currentDate.getMonth() + intervalMonths);
+      }
+
+      scheduleRows.push({
+        stage_type: stageType,
+        due_date: currentDate.toISOString().split("T")[0],
+        amount: Math.round(amount * 100) / 100,
+        is_kpr: false,
+      });
     }
 
-    const product = productRes.rows[0];
-    const plan = planRes.rows[0];
+    // KPR = remaining after all non-KPR stages
+    kprAmount = Math.max(0, housePrice - otherStagesTotal);
 
-    // Calculate amortization schedule
-    const schedule = calculateAmortization(
-      Number(product.price),
-      Number(plan.down_payment_pct),
-      Number(plan.loan_tenor_years),
-      Number(plan.interest_rate),
-      new Date(booking_date)
-    );
+    // ─── Build KPR schedule ───
+    let kprMonthlyPayment = 0;
+    if (kprAmount > 0 && kprTenor > 0 && kprRate > 0) {
+      const monthlyRate = kprRate / 100 / 12;
+      const numPayments = kprTenor * 12;
+      kprMonthlyPayment =
+        (kprAmount * (monthlyRate * Math.pow(1 + monthlyRate, numPayments))) /
+        (Math.pow(1 + monthlyRate, numPayments) - 1);
+    } else if (kprAmount > 0 && kprTenor > 0) {
+      kprMonthlyPayment = kprAmount / (kprTenor * 12);
+    }
+
+    if (kprAmount > 0 && kprTenor > 0) {
+      const kprStartDate = new Date(booking_date);
+      let runningBalance = kprAmount;
+      for (let i = 1; i <= kprTenor * 12; i++) {
+        const dueDate = new Date(kprStartDate);
+        dueDate.setMonth(dueDate.getMonth() + i);
+        let interestPayment = runningBalance * (kprRate / 100 / 12);
+        let principalPayment = kprMonthlyPayment - interestPayment;
+        runningBalance -= principalPayment;
+        scheduleRows.push({
+          stage_type: "KPR",
+          due_date: dueDate.toISOString().split("T")[0],
+          amount: Math.round(kprMonthlyPayment * 100) / 100,
+          principal: Math.round(principalPayment * 100) / 100,
+          interest: Math.round(interestPayment * 100) / 100,
+          remaining_balance: Math.max(0, Math.round(runningBalance * 100) / 100),
+          is_kpr: true,
+        });
+      }
+    }
 
     const id = generateId();
+    const schedule = {
+      housePrice,
+      stages: scheduleRows,
+      kprAmount: Math.round(kprAmount * 100) / 100,
+      kprMonthlyPayment: Math.round(kprMonthlyPayment * 100) / 100,
+    };
+
     await pool.query(
       "INSERT INTO schemes (id, user_id, name, customer_id, product_id, payment_plan_id, booking_date, schedule) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)",
       [id, userId, name, customer_id, product_id, payment_plan_id, booking_date, JSON.stringify(schedule)]
