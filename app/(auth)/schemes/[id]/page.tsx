@@ -30,7 +30,8 @@ export default function SchemeDetailPage() {
 
   const s = scheme;
   const sched = s.schedule || {};
-  const stages = sched.stages || [];
+  const stages: any[] = sched.stages || [];
+  const housePrice = sched.housePrice || 0;
 
   // ── Unified running balance across ALL stages sorted by date ──
   const allRows: any[] = stages.map((r) => ({ ...r }));
