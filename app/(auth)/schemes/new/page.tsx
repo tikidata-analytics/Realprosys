@@ -30,17 +30,18 @@ export default function NewSchemePage() {
     if (!form.customer_id || !form.product_id || !form.payment_plan_id || !form.booking_date) return;
     const product = products.find((p) => p.id === form.product_id);
     const plan = paymentPlans.find((p) => p.id === form.payment_plan_id);
+    const customer = customers.find((c) => c.id === form.customer_id);
     if (!product || !plan) return;
 
     const housePrice = Number(product.price);
     const stages: any[] = plan.stages || [];
 
-    // Calculate preview (same logic as API)
     let otherTotal = 0;
     let kprRate = 0;
     let kprTenor = 0;
     const previewStages: any[] = [];
     let currentDate = new Date(form.booking_date);
+    let accumulated = 0;
 
     const sorted = [...stages].sort((a: any, b: any) => a.stage_order - b.stage_order);
 
@@ -61,20 +62,65 @@ export default function NewSchemePage() {
         currentDate = new Date(currentDate);
         currentDate.setMonth(currentDate.getMonth() + Number(stage.interval_months));
       }
-      previewStages.push({ ...stage, amount, due_date: currentDate.toISOString().split("T")[0] });
+      accumulated += amount;
+      previewStages.push({ ...stage, amount, accumulated, due_date: currentDate.toISOString().split("T")[0] });
     }
 
     const kprAmount = Math.max(0, housePrice - otherTotal);
     let kprMonthly = 0;
+    const kprSchedule: any[] = [];
     if (kprAmount > 0 && kprTenor > 0 && kprRate > 0) {
       const mr = kprRate / 100 / 12;
       const np = kprTenor * 12;
       kprMonthly = (kprAmount * (mr * Math.pow(1 + mr, np))) / (Math.pow(1 + mr, np) - 1);
+      const kprStartDate = new Date(form.booking_date);
+      let runningBalance = kprAmount;
+      for (let i = 1; i <= np; i++) {
+        const dueDate = new Date(kprStartDate);
+        dueDate.setMonth(dueDate.getMonth() + i);
+        const interestPayment = runningBalance * mr;
+        const principalPayment = kprMonthly - interestPayment;
+        runningBalance -= principalPayment;
+        kprSchedule.push({
+          due_date: dueDate.toISOString().split("T")[0],
+          amount: Math.round(kprMonthly * 100) / 100,
+          principal: Math.round(principalPayment * 100) / 100,
+          interest: Math.round(interestPayment * 100) / 100,
+          remaining_balance: Math.max(0, Math.round(runningBalance * 100) / 100),
+        });
+      }
     } else if (kprAmount > 0 && kprTenor > 0) {
       kprMonthly = kprAmount / (kprTenor * 12);
+      const kprStartDate = new Date(form.booking_date);
+      let runningBalance = kprAmount;
+      for (let i = 1; i <= kprTenor * 12; i++) {
+        const dueDate = new Date(kprStartDate);
+        dueDate.setMonth(dueDate.getMonth() + i);
+        const principalPayment = kprMonthly;
+        runningBalance -= principalPayment;
+        kprSchedule.push({
+          due_date: dueDate.toISOString().split("T")[0],
+          amount: Math.round(kprMonthly * 100) / 100,
+          principal: Math.round(principalPayment * 100) / 100,
+          interest: 0,
+          remaining_balance: Math.max(0, Math.round(runningBalance * 100) / 100),
+        });
+      }
     }
 
-    setPreview({ housePrice, stages: previewStages, kprAmount, kprMonthly, kprTenor, kprRate, otherTotal });
+    setPreview({
+      housePrice,
+      customerName: customer?.name || "-",
+      productName: product?.name || "-",
+      projectName: product?.project_name || "-",
+      stages: previewStages,
+      kprAmount,
+      kprMonthly,
+      kprTenor,
+      kprRate,
+      kprSchedule,
+      otherTotal,
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -166,58 +212,139 @@ export default function NewSchemePage() {
         </div>
 
         {preview && (
-          <div className="bg-indigo-50 rounded-xl p-6 space-y-3">
-            <h3 className="font-semibold text-indigo-900">Preview</h3>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
-              <div>
-                <span className="text-indigo-600 text-xs">Harga Rumah</span>
+          <div className="bg-indigo-50 rounded-xl p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="font-semibold text-indigo-900">Preview</h3>
+            </div>
+
+            {/* Info header */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+              {[
+                { label: "Pelanggan", value: preview.customerName || "-" },
+                { label: "Proyek", value: preview.projectName || "-" },
+                { label: "Produk", value: preview.productName || "-" },
+                { label: "Harga Rumah", value: formatCurrency(preview.housePrice) },
+              ].map(({ label, value }) => (
+                <div key={label} className="bg-white rounded-lg px-3 py-2">
+                  <div className="text-xs text-slate-500">{label}</div>
+                  <div className="font-medium text-slate-800 text-sm truncate">{value}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Summary */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+              <div className="bg-white rounded-lg px-3 py-2">
+                <div className="text-xs text-slate-500">Total Tagihan</div>
                 <div className="font-bold text-indigo-900">{formatCurrency(preview.housePrice)}</div>
+              </div>
+              <div className="bg-white rounded-lg px-3 py-2">
+                <div className="text-xs text-slate-500">Sudah Dibayar</div>
+                <div className="font-bold text-green-700">{formatCurrency(preview.otherTotal + preview.kprAmount)}</div>
               </div>
               {preview.kprAmount > 0 ? (
                 <>
-                  <div>
-                    <span className="text-indigo-600 text-xs">Pinjaman KPR</span>
-                    <div className="font-bold text-indigo-900">{formatCurrency(preview.kprAmount)}</div>
+                  <div className="bg-white rounded-lg px-3 py-2">
+                    <div className="text-xs text-slate-500">Pinjaman KPR</div>
+                    <div className="font-bold text-blue-700">{formatCurrency(preview.kprAmount)}</div>
                   </div>
-                  {preview.kprRate > 0 && (
-                    <div>
-                      <span className="text-indigo-600 text-xs">Bunga</span>
-                      <div className="font-bold text-indigo-900">{preview.kprRate}%/thn</div>
-                    </div>
-                  )}
-                  <div>
-                    <span className="text-indigo-600 text-xs">Tenor KPR</span>
-                    <div className="font-bold text-indigo-900">{preview.kprTenor} tahun</div>
-                  </div>
-                  <div>
-                    <span className="text-indigo-600 text-xs">Cicilan/Bulan</span>
-                    <div className="font-bold text-indigo-900">{formatCurrency(preview.kprMonthly)}</div>
+                  <div className="bg-white rounded-lg px-3 py-2">
+                    <div className="text-xs text-slate-500">Cicilan/Bulan</div>
+                    <div className="font-bold text-blue-700">{formatCurrency(preview.kprMonthly)}</div>
                   </div>
                 </>
               ) : (
-                <div className="col-span-2">
-                  <span className="text-amber-600 text-xs">Tanpa KPR</span>
-                  <div className="font-bold text-amber-900">Cash / Pelunasan bertahap</div>
+                <div className="col-span-2 bg-amber-50 rounded-lg px-3 py-2 border border-amber-200">
+                  <div className="text-xs text-amber-600">Tanpa KPR</div>
+                  <div className="font-bold text-amber-800">Cash / Pelunasan bertahap</div>
                 </div>
               )}
             </div>
 
-            {/* Stage breakdown */}
-            <div className="mt-3 pt-3 border-t border-indigo-200">
-              <div className="text-xs text-indigo-600 font-medium mb-2">Tahapan:</div>
-              <div className="space-y-1">
-                {preview.stages.map((s: any, i: number) => (
-                  <div key={i} className="flex justify-between text-sm">
-                    <span className="text-indigo-800">
-                      {s.stage_type === "BOOKING_FEE" ? "Booking Fee" :
-                       s.stage_type === "DOWN_PAYMENT" ? `Uang Muka` :
-                       s.stage_type === "SETTLEMENT" ? "Pelunasan" : s.stage_type}
-                    </span>
-                    <span className="font-medium text-indigo-900">{formatCurrency(s.amount)}</span>
-                  </div>
-                ))}
+            {/* Stage table */}
+            {preview.stages.length > 0 && (
+              <div className="border border-indigo-200 rounded-lg overflow-hidden">
+                <table className="w-full text-xs">
+                  <thead className="bg-indigo-100">
+                    <tr>
+                      <th className="text-left px-3 py-2 font-medium text-indigo-700">Tahap</th>
+                      <th className="text-left px-3 py-2 font-medium text-indigo-700">Tanggal</th>
+                      <th className="text-right px-3 py-2 font-medium text-indigo-700">Jumlah</th>
+                      <th className="text-right px-3 py-2 font-medium text-indigo-700">Sisa Sebelum</th>
+                      <th className="text-right px-3 py-2 font-medium text-indigo-700">Sisa Sesudah</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-indigo-100">
+                    {preview.stages.map((s: any, i: number) => {
+                      const sisaSesudah = Math.max(0, preview.housePrice - (s.accumulated || 0));
+                      return (
+                        <tr key={i} className="bg-white">
+                          <td className="px-3 py-2">
+                            <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${
+                              s.stage_type === "BOOKING_FEE" ? "bg-amber-100 text-amber-700" :
+                              s.stage_type === "DOWN_PAYMENT" ? "bg-green-100 text-green-700" :
+                              s.stage_type === "SETTLEMENT" ? "bg-purple-100 text-purple-700" :
+                              "bg-blue-100 text-blue-700"
+                            }`}>
+                              {s.stage_type === "BOOKING_FEE" ? "Booking Fee" :
+                               s.stage_type === "DOWN_PAYMENT" ? "Uang Muka" :
+                               s.stage_type === "SETTLEMENT" ? "Pelunasan" :
+                               s.stage_type === "KPR" ? "KPR" : s.stage_type}
+                            </span>
+                          </td>
+                          <td className="px-3 py-2 text-slate-600">{formatDate(s.due_date)}</td>
+                          <td className="px-3 py-2 text-right font-medium text-slate-800">{formatCurrency(s.amount)}</td>
+                          <td className="px-3 py-2 text-right text-slate-500">{formatCurrency(sisaSesudah + s.amount)}</td>
+                          <td className="px-3 py-2 text-right font-medium text-slate-800">{formatCurrency(sisaSesudah)}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
-            </div>
+            )}
+
+            {/* KPR schedule summary */}
+            {preview.kprAmount > 0 && (
+              <div className="border border-blue-200 rounded-lg overflow-hidden">
+                <div className="bg-blue-50 px-3 py-2 border-b border-blue-200">
+                  <span className="text-xs font-medium text-blue-700">Jadwal KPR — {preview.kprTenor} tahun × {formatCurrency(preview.kprMonthly)}/bulan</span>
+                </div>
+                <table className="w-full text-xs">
+                  <thead className="bg-blue-50">
+                    <tr>
+                      <th className="text-left px-3 py-1 font-medium text-blue-700">#</th>
+                      <th className="text-left px-3 py-1 font-medium text-blue-700">Tanggal</th>
+                      <th className="text-right px-3 py-1 font-medium text-blue-700">Cicilan</th>
+                      <th className="text-right px-3 py-1 font-medium text-blue-700">Pokok</th>
+                      <th className="text-right px-3 py-1 font-medium text-blue-700">Bunga</th>
+                      <th className="text-right px-3 py-1 font-medium text-blue-700">Sisa</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-blue-100">
+                    {(preview.kprSchedule || []).slice(0, 6).map((row: any, i: number) => (
+                      <tr key={i} className="bg-white">
+                        <td className="px-3 py-1 text-slate-500">{i + 1}</td>
+                        <td className="px-3 py-1 text-slate-600">{formatDate(row.due_date)}</td>
+                        <td className="px-3 py-1 text-right text-slate-700">{formatCurrency(row.amount)}</td>
+                        <td className="px-3 py-1 text-right text-slate-600">{formatCurrency(row.principal)}</td>
+                        <td className="px-3 py-1 text-right text-slate-600">{formatCurrency(row.interest)}</td>
+                        <td className="px-3 py-1 text-right text-slate-700">{formatCurrency(row.remaining_balance)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  {(preview.kprSchedule || []).length > 6 && (
+                    <tfoot>
+                      <tr className="bg-slate-50">
+                        <td colSpan={6} className="px-3 py-1 text-center text-xs text-slate-500">
+                          + {(preview.kprSchedule || []).length - 6} bulan lagi...
+                        </td>
+                      </tr>
+                    </tfoot>
+                  )}
+                </table>
+              </div>
+            )}
           </div>
         )}
 
