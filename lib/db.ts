@@ -8,7 +8,7 @@ function getDatabaseUrl(): string {
   const database = process.env.rps_PGDATABASE || process.env.PGDATABASE;
   const user = process.env.rps_POSTGRES_USER || process.env.PGUSER;
   const password = process.env.rps_POSTGRES_PASSWORD || process.env.PGPASSWORD;
-  
+
   if (host && database && user && password) {
     return `postgresql://${user}:${password}@${host}/${database}?sslmode=require`;
   }
