@@ -7,6 +7,7 @@ interface KprChartProps {
     amount: number;
     principal: number;
     interest: number;
+    remaining_balance: number;
     due_date: string;
   }[];
 }
@@ -14,35 +15,53 @@ interface KprChartProps {
 export default function KprChart({ schedule }: KprChartProps) {
   if (!schedule || schedule.length === 0) return null;
 
-  const W = 600;
-  const H = 200;
-  const PL = 50;
+  const W = 640;
+  const H = 220;
+  const PL = 55;
   const PR = 20;
   const PT = 10;
-  const PB = 30;
+  const PB = 35;
   const chartW = W - PL - PR;
   const chartH = H - PT - PB;
 
   const maxAmt = Math.max(...schedule.map(r => r.amount));
+  const maxBalance = Math.max(...schedule.map(r => r.remaining_balance));
+  const maxVal = Math.max(maxAmt, maxBalance);
 
-  // Sample every N rows to keep SVG manageable (max 120 points)
+  // Sample to max 60 points for readability
   const total = schedule.length;
-  const step = Math.max(1, Math.floor(total / 80));
+  const step = Math.max(1, Math.floor(total / 60));
   const sampled = schedule.filter((_, i) => i % step === 0 || i === total - 1);
 
   const scaleX = (i: number) => PL + (i / (sampled.length - 1)) * chartW;
-  const scaleY = (v: number) => PT + chartH - (v / maxAmt) * chartH;
+  const scaleY = (v: number) => PT + chartH - (v / maxVal) * chartH;
 
-  const path = (key: keyof typeof schedule[0]) => {
-    return sampled.map((r, i) => {
+  const path = (key: keyof typeof schedule[0]) =>
+    sampled.map((r, i) => {
       const x = scaleX(i);
       const y = scaleY(r[key] as number);
       return `${i === 0 ? "M" : "L"} ${x} ${y}`;
     }).join(" ");
-  };
 
-  const dotPositions = (key: keyof typeof schedule[0]) =>
-    sampled.map((r, i) => ({ x: scaleX(i), y: scaleY(r[key] as number) }));
+  // Y axis: currency labels
+  const yLabels = [0, 0.25, 0.5, 0.75, 1].map(frac => ({
+    y: PT + chartH - frac * chartH,
+    val: frac * maxVal,
+  }));
+
+  // X axis: date labels at intervals
+  const xLabels: { x: number; label: string }[] = [];
+  const xStep = Math.max(1, Math.floor(sampled.length / 6));
+  for (let i = 0; i < sampled.length; i += xStep) {
+    const d = new Date(sampled[i].due_date);
+    xLabels.push({ x: scaleX(i), label: d.toLocaleDateString("id-ID", { day: "2-digit", month: "short" }) });
+  }
+  // Always include last
+  const lastIdx = sampled.length - 1;
+  if (!xLabels.find(l => l.x === scaleX(lastIdx))) {
+    const d = new Date(sampled[lastIdx].due_date);
+    xLabels.push({ x: scaleX(lastIdx), label: d.toLocaleDateString("id-ID", { day: "2-digit", month: "short" }) });
+  }
 
   return (
     <div className="border border-blue-200 rounded-lg overflow-hidden mb-3">
@@ -52,48 +71,44 @@ export default function KprChart({ schedule }: KprChartProps) {
       <div className="bg-slate-50 p-2" style={{ overflowX: "auto" }}>
         <svg viewBox={`0 0 ${W} ${H}`} width="100%" height={H} style={{ minWidth: `${W}px` }}>
           {/* Grid lines */}
-          {[0, 0.25, 0.5, 0.75, 1].map((frac) => {
-            const y = PT + chartH - frac * chartH;
-            const val = frac * maxAmt;
-            return (
-              <g key={frac}>
-                <line x1={PL} y1={y} x2={PL + chartW} y2={y} stroke="#e2e8f0" strokeWidth="1" />
-                <text x={PL - 4} y={y + 3} textAnchor="end" fontSize="8" fill="#94a3b8">
-                  {frac === 0 ? "0" : `${(frac * 100).toFixed(0)}%`}
-                </text>
-                <text x={PL + chartW + 4} y={y + 3} textAnchor="start" fontSize="8" fill="#64748b">
-                  {formatCurrency(val).replace("Rp", "").trim()}
-                </text>
-              </g>
-            );
-          })}
+          {yLabels.map(({ y, val }) => (
+            <g key={val}>
+              <line x1={PL} y1={y} x2={PL + chartW} y2={y} stroke="#e2e8f0" strokeWidth="1" />
+              <text x={PL - 5} y={y + 3} textAnchor="end" fontSize="8" fill="#94a3b8">
+                {val >= 1000000
+                  ? `${(val / 1000000).toFixed(1)}jt`
+                  : val >= 1000
+                  ? `${(val / 1000).toFixed(0)}rb`
+                  : val.toFixed(0)}
+              </text>
+            </g>
+          ))}
 
-          {/* X axis labels */}
-          {[0, sampled.length - 1].map((idx) => (
-            <text key={idx} x={scaleX(idx)} y={PT + chartH + 12} textAnchor={idx === 0 ? "start" : "end"} fontSize="8" fill="#94a3b8">
-              Bln {idx + 1}
+          {/* X axis dates */}
+          {xLabels.map(({ x, label }) => (
+            <text key={x} x={x} y={PT + chartH + 12} textAnchor="middle" fontSize="8" fill="#94a3b8">
+              {label}
             </text>
           ))}
 
-          {/* Lines */}
+          {/* Outstanding balance (red dashed, behind) */}
+          <path d={path("remaining_balance")} fill="none" stroke="#ef4444" strokeWidth="2" strokeDasharray="4,2" />
+
+          {/* Main lines */}
           <path d={path("amount")} fill="none" stroke="#3b82f6" strokeWidth="2" />
           <path d={path("principal")} fill="none" stroke="#22c55e" strokeWidth="2" />
           <path d={path("interest")} fill="none" stroke="#f97316" strokeWidth="2" />
 
-          {/* Dots on intersections */}
-          {(dotPositions("interest")).map((p, i) => (
-            <circle key={i} cx={p.x} cy={p.y} r="2.5" fill="#f97316" />
-          ))}
-
           {/* Legend */}
-          <g transform={`translate(${PL}, ${PT - 2})`}>
+          <g transform={`translate(${PL}, ${PT})`}>
             {[
               { color: "#3b82f6", label: "Cicilan" },
               { color: "#22c55e", label: "Pokok" },
               { color: "#f97316", label: "Bunga" },
-            ].map(({ color, label }, i) => (
-              <g key={label} transform={`translate(${i * 90}, 0)`}>
-                <line x1="0" y1="0" x2="14" y2="0" stroke={color} strokeWidth="2" />
+              { color: "#ef4444", label: "Outstanding", dashed: true },
+            ].map(({ color, label, dashed }, i) => (
+              <g key={label} transform={`translate(${i * 100}, 0)`}>
+                <line x1="0" y1="0" x2="14" y2="0" stroke={color} strokeWidth="2" strokeDasharray={dashed ? "4,2" : "none"} />
                 <text x="18" y="3" fontSize="9" fill="#475569">{label}</text>
               </g>
             ))}

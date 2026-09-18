@@ -199,12 +199,12 @@ export default function NewSchemePage() {
           <h3 className="font-semibold text-slate-800">Informasi Skema</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Nama Skema</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Nama Skema <span className="text-red-500">*</span></label>
               <input type="text" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required placeholder="Misal: Rumah Pak Budi KPR 20th"
                 className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Tanggal Booking</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Tanggal Booking <span className="text-red-500">*</span></label>
               <DatePicker
                 value={form.booking_date}
                 onChange={(v) => { setForm({ ...form, booking_date: v }); setPreview(null); }}
@@ -221,7 +221,7 @@ export default function NewSchemePage() {
           <h3 className="font-semibold text-slate-800">Pilih Data</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Pelanggan</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Pelanggan <span className="text-red-500">*</span></label>
               <select value={form.customer_id} onChange={(e) => setForm({ ...form, customer_id: e.target.value })} required
                 className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
                 <option value="">Pilih...</option>
@@ -229,7 +229,7 @@ export default function NewSchemePage() {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Produk</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Produk <span className="text-red-500">*</span></label>
               <select value={form.product_id} onChange={(e) => { setForm({ ...form, product_id: e.target.value }); setPreview(null); }} required
                 className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
                 <option value="">Pilih...</option>
@@ -237,7 +237,7 @@ export default function NewSchemePage() {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Rencana Pembayaran</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Rencana Pembayaran <span className="text-red-500">*</span></label>
               <select value={form.payment_plan_id} onChange={(e) => { setForm({ ...form, payment_plan_id: e.target.value }); setPreview(null); }} required
                 className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
                 <option value="">Pilih...</option>
@@ -308,97 +308,96 @@ export default function NewSchemePage() {
               )}
             </div>
 
-            {/* Stage table */}
+            {/* Payment Schedule Table — unified, same as detail page */}
             {preview.stages.length > 0 && (
-              <div className="border border-indigo-200 rounded-lg overflow-hidden">
-                <table className="w-full text-xs">
-                  <thead className="bg-indigo-100">
-                    <tr>
-                      <th className="text-left px-3 py-2 font-medium text-indigo-700">Tahap</th>
-                      <th className="text-left px-3 py-2 font-medium text-indigo-700">Tanggal</th>
-                      <th className="text-right px-3 py-2 font-medium text-indigo-700">Sisa Sebelum</th>
-                      <th className="text-right px-3 py-2 font-medium text-indigo-700">Tagihan</th>
-                      <th className="text-right px-3 py-2 font-medium text-indigo-700">Sisa Sesudah</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-indigo-100">
-                    {preview.stages.map((s: any, i: number) => {
-                      const dpCounter = s.stage_type === "DOWN_PAYMENT" ? preview.dpCounters[s.stage_order] : null;
-                      const sisaSesudah = Math.max(0, preview.housePrice - (s.accumulated || 0));
-                      return (
-                        <tr key={i} className="bg-white">
+              <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+                <div className="px-4 py-3 border-b border-slate-200">
+                  <h3 className="font-semibold text-slate-800">Jadwal Pembayaran</h3>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs">
+                    <thead className="bg-slate-50 border-b border-slate-200">
+                      <tr>
+                        <th className="text-left px-3 py-2 font-medium text-slate-600">Tahap</th>
+                        <th className="text-left px-3 py-2 font-medium text-slate-600">Tanggal</th>
+                        <th className="text-right px-3 py-2 font-medium text-slate-600">Jumlah</th>
+                        {preview.kprAmount > 0 && (
+                          <>
+                            <th className="text-right px-3 py-2 font-medium text-slate-600">Pokok</th>
+                            <th className="text-right px-3 py-2 font-medium text-slate-600">Bunga</th>
+                            <th className="text-right px-3 py-2 font-medium text-slate-600">Sisa</th>
+                          </>
+                        )}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {preview.stages.map((s: any, idx: number) => {
+                        const dpCounter = s.stage_type === "DOWN_PAYMENT" ? preview.dpCounters[s.stage_order] : null;
+                        return (
+                          <tr key={idx} className="hover:bg-slate-50">
+                            <td className="px-3 py-2">
+                              <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${
+                                s.stage_type === "BOOKING_FEE" ? "bg-amber-100 text-amber-700" :
+                                s.stage_type === "DOWN_PAYMENT" ? "bg-green-100 text-green-700" :
+                                s.stage_type === "SETTLEMENT" ? "bg-purple-100 text-purple-700" :
+                                "bg-blue-100 text-blue-700"
+                              }`}>
+                                {s.stage_type === "BOOKING_FEE" ? "Booking Fee" :
+                                 s.stage_type === "DOWN_PAYMENT" ? `Uang Muka ${dpCounter || ""}` :
+                                 s.stage_type === "SETTLEMENT" ? "Pelunasan" :
+                                 s.stage_type === "KPR" ? `KPR #${idx - preview.stages.filter((st: any) => !st.stage_type || st.stage_type !== "KPR").length + 1}` :
+                                 s.stage_type}
+                              </span>
+                            </td>
+                            <td className="px-3 py-2 text-slate-700">
+                              {new Date(s.due_date).toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "numeric" })}
+                            </td>
+                            <td className="px-3 py-2 text-right text-slate-700 font-medium">
+                              {Number(s.amount || 0).toLocaleString("id-ID")}
+                            </td>
+                            {preview.kprAmount > 0 && (
+                              <>
+                                <td className="px-3 py-2 text-right text-slate-400">—</td>
+                                <td className="px-3 py-2 text-right text-slate-400">—</td>
+                                <td className="px-3 py-2 text-right text-slate-400">—</td>
+                              </>
+                            )}
+                          </tr>
+                        );
+                      })}
+                      {/* KPR rows */}
+                      {preview.kprSchedule.map((row: any, idx: number) => (
+                        <tr key={`kpr-${idx}`} className="hover:bg-slate-50">
                           <td className="px-3 py-2">
-                            <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${
-                              s.stage_type === "BOOKING_FEE" ? "bg-amber-100 text-amber-700" :
-                              s.stage_type === "DOWN_PAYMENT" ? "bg-green-100 text-green-700" :
-                              s.stage_type === "SETTLEMENT" ? "bg-purple-100 text-purple-700" :
-                              "bg-blue-100 text-blue-700"
-                            }`}>
-                              {s.stage_type === "BOOKING_FEE" ? "Booking Fee" :
-                               s.stage_type === "DOWN_PAYMENT" ? `Uang Muka ${dpCounter || ""}` :
-                               s.stage_type === "SETTLEMENT" ? "Pelunasan" :
-                               s.stage_type === "KPR" ? "KPR" : s.stage_type}
+                            <span className="inline-block px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-700">
+                              KPR #{idx + 1}
                             </span>
                           </td>
-                          <td className="px-3 py-2 text-slate-600">{formatDate(s.due_date)}</td>
-                          <td className="px-3 py-2 text-right text-slate-500">{formatCurrency(sisaSesudah + s.amount)}</td>
-                          <td className="px-3 py-2 text-right font-medium text-slate-800">{formatCurrency(s.amount)}</td>
-                          <td className="px-3 py-2 text-right font-medium text-slate-800">{formatCurrency(sisaSesudah)}</td>
+                          <td className="px-3 py-2 text-slate-700">
+                            {new Date(row.due_date).toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "numeric" })}
+                          </td>
+                          <td className="px-3 py-2 text-right text-slate-700 font-medium">
+                            {Number(row.amount || 0).toLocaleString("id-ID")}
+                          </td>
+                          <td className="px-3 py-2 text-right text-slate-600">
+                            {Number(row.principal || 0).toLocaleString("id-ID")}
+                          </td>
+                          <td className="px-3 py-2 text-right text-slate-600">
+                            {Number(row.interest || 0).toLocaleString("id-ID")}
+                          </td>
+                          <td className="px-3 py-2 text-right text-slate-600">
+                            {Number(row.remaining_balance || 0).toLocaleString("id-ID")}
+                          </td>
                         </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             )}
 
-            {/* KPR schedule summary */}
-            {preview.kprAmount > 0 && (
-              <div>
-                <KprChart schedule={preview.kprSchedule} />
-                <div className="border border-blue-200 rounded-lg overflow-hidden">
-                <div className="bg-blue-50 px-3 py-2 border-b border-blue-200">
-                  <span className="text-xs font-medium text-blue-700">Jadwal KPR — {preview.kprTenor} tahun × {formatCurrency(preview.kprMonthly)}/bulan</span>
-                </div>
-                <table className="w-full text-xs">
-                  <thead className="bg-blue-50">
-                    <tr>
-                      <th className="text-left px-3 py-1 font-medium text-blue-700">#</th>
-                      <th className="text-left px-3 py-1 font-medium text-blue-700">Tanggal</th>
-                      <th className="text-right px-3 py-1 font-medium text-blue-700">Cicilan</th>
-                      <th className="text-right px-3 py-1 font-medium text-blue-700">Pokok</th>
-                      <th className="text-right px-3 py-1 font-medium text-blue-700">Bunga</th>
-                      <th className="text-right px-3 py-1 font-medium text-blue-700">Sisa</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-blue-100">
-                    {(preview.kprSchedule || []).slice(0, showAllKpr ? undefined : 6).map((row: any, i: number) => (
-                      <tr key={i} className="bg-white">
-                        <td className="px-3 py-1 text-slate-500">{i + 1}</td>
-                        <td className="px-3 py-1 text-slate-600">{formatDate(row.due_date)}</td>
-                        <td className="px-3 py-1 text-right text-slate-700">{formatCurrency(row.amount)}</td>
-                        <td className="px-3 py-1 text-right text-slate-600">{formatCurrency(row.principal)}</td>
-                        <td className="px-3 py-1 text-right text-slate-600">{formatCurrency(row.interest)}</td>
-                        <td className="px-3 py-1 text-right text-slate-700">{formatCurrency(row.remaining_balance)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                  {(preview.kprSchedule || []).length > 6 && (
-                    <tfoot>
-                      <tr className="bg-slate-50">
-                        <td colSpan={6} className="px-3 py-2 text-center">
-                          <button onClick={() => setShowAllKpr(!showAllKpr)}
-                            className="text-xs text-indigo-600 hover:text-indigo-800 font-medium">
-                            {showAllKpr ? "▲ Sembunyikan" : `▼ Lihat semua ${preview.kprSchedule.length} bulan`}
-                          </button>
-                        </td>
-                      </tr>
-                    </tfoot>
-                  )}
-                </table>
-                </div>
-              </div>
-            )}
+            {/* KPR chart — shown only when there's KPR */}
+            {preview.kprAmount > 0 && <KprChart schedule={preview.kprSchedule} />}
           </div>
         )}
 

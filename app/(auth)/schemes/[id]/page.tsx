@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
+import KprChart from "@/components/KprChart";
 
 export default function SchemeDetailPage() {
   const { id } = useParams();
@@ -111,6 +112,11 @@ export default function SchemeDetailPage() {
           </table>
         </div>
       </div>
+
+      {/* KPR Chart */}
+      {sched.kprAmount > 0 && sched.kprSchedule && (
+        <KprChart schedule={sched.kprSchedule} />
+      )}
     </div>
   );
 }
