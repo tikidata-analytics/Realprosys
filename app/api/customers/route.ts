@@ -24,12 +24,15 @@ export async function POST(req: NextRequest) {
   try {
     const { name, email, phone, birth_date, gender } = await req.json();
     if (!name) return NextResponse.json({ error: "Name required" }, { status: 400 });
-    if (!birth_date || !gender) return NextResponse.json({ error: "Tanggal lahir dan gender wajib diisi" }, { status: 400 });
+    if (email) {
+      const existing = await pool.query("SELECT id FROM customers WHERE user_id=$1 AND LOWER(email)=LOWER($2)", [userId, email]);
+      if (existing.rows.length > 0) return NextResponse.json({ error: "Email sudah terdaftar" }, { status: 409 });
+    }
 
     const id = generateId();
     await pool.query(
       "INSERT INTO customers (id, user_id, name, email, phone, birth_date, gender) VALUES ($1,$2,$3,$4,$5,$6,$7)",
-      [id, userId, name, email || null, phone || null, birth_date, gender]
+      [id, userId, name, email || null, phone || null, birth_date || null, gender || null]
     );
     return NextResponse.json({ id, user_id: userId, name, email, phone, birth_date, gender }, { status: 201 });
   } catch {

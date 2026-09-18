@@ -7,7 +7,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   const { id } = await params;
   try {
     const result = await pool.query(
-      "SELECT p.*, pr.name as project_name FROM products p LEFT JOIN projects pr ON p.project_id = pr.id WHERE p.id=$1 AND p.user_id=$2",
+      "SELECT p.id, p.name, p.type, p.price, p.project_id, p.land_area, p.building_area, p.bedrooms, p.bathrooms, p.created_at, pr.name as project_name FROM products p LEFT JOIN projects pr ON p.project_id = pr.id WHERE p.id=$1 AND p.user_id=$2",
       [id, userId]
     );
     if (result.rows.length === 0) return NextResponse.json({ error: "Not found" }, { status: 404 });
@@ -21,8 +21,12 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   const { id } = await params;
   try {
     const { name, type, price, project_id, land_area, building_area, bedrooms, bathrooms } = await req.json();
+    if (project_id) {
+      const projectCheck = await pool.query("SELECT id FROM projects WHERE id=$1 AND user_id=$2", [project_id, userId]);
+      if (projectCheck.rows.length === 0) return NextResponse.json({ error: "Proyek tidak ditemukan" }, { status: 404 });
+    }
     const result = await pool.query(
-      "UPDATE products SET name=COALESCE($1,name), type=COALESCE($2,type), price=COALESCE($3,price), project_id=COALESCE($4,project_id), land_area=COALESCE($5,land_area), building_area=COALESCE($6,building_area), bedrooms=COALESCE($7,bedrooms), bathrooms=COALESCE($8,bathrooms) WHERE id=$9 AND user_id=$10 RETURNING *",
+      "UPDATE products SET name=COALESCE(NULLIF($1,''),name), type=COALESCE(NULLIF($2,''),type), price=COALESCE($3,price), project_id=COALESCE($4,project_id), land_area=COALESCE($5,land_area), building_area=COALESCE($6,building_area), bedrooms=COALESCE($7,bedrooms), bathrooms=COALESCE($8,bathrooms) WHERE id=$9 AND user_id=$10 RETURNING *",
       [name, type, price, project_id, land_area, building_area, bedrooms, bathrooms, id, userId]
     );
     if (result.rows.length === 0) return NextResponse.json({ error: "Not found" }, { status: 404 });

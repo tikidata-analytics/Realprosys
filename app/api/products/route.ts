@@ -7,7 +7,7 @@ export async function GET(req: NextRequest) {
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   try {
     const result = await pool.query(
-      "SELECT p.*, pr.name as project_name FROM products p LEFT JOIN projects pr ON p.project_id = pr.id WHERE p.user_id = $1 ORDER BY p.created_at DESC",
+      "SELECT p.id, p.name, p.type, p.price, p.project_id, p.land_area, p.building_area, p.bedrooms, p.bathrooms, p.created_at, pr.name as project_name FROM products p LEFT JOIN projects pr ON p.project_id = pr.id WHERE p.user_id = $1 ORDER BY p.created_at DESC",
       [userId]
     );
     return NextResponse.json(result.rows);
@@ -23,6 +23,10 @@ export async function POST(req: NextRequest) {
     const { name, type, price, project_id, land_area, building_area, bedrooms, bathrooms } = await req.json();
     if (!name || !type || !price || !project_id) return NextResponse.json({ error: "Name, type, price, project_id wajib diisi" }, { status: 400 });
     if (!land_area || !building_area || !bedrooms || !bathrooms) return NextResponse.json({ error: "Luas tanah, luas bangunan, kamar tidur, kamar mandi wajib diisi" }, { status: 400 });
+
+    // Validate project ownership
+    const projectCheck = await pool.query("SELECT id FROM projects WHERE id=$1 AND user_id=$2", [project_id, userId]);
+    if (projectCheck.rows.length === 0) return NextResponse.json({ error: "Proyek tidak ditemukan" }, { status: 404 });
 
     const id = generateId();
     await pool.query(

@@ -25,9 +25,13 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   const { id } = await params;
   try {
     const { name, email, phone, birth_date, gender } = await req.json();
+    if (email) {
+      const existing = await pool.query("SELECT id FROM customers WHERE user_id=$1 AND LOWER(email)=LOWER($2) AND id!=$3", [userId, email, id]);
+      if (existing.rows.length > 0) return NextResponse.json({ error: "Email sudah terdaftar" }, { status: 409 });
+    }
     const result = await pool.query(
-      "UPDATE customers SET name=COALESCE($1,name), email=COALESCE($2,email), phone=COALESCE($3,phone), birth_date=COALESCE($4,birth_date), gender=COALESCE($5,gender) WHERE id=$6 AND user_id=$7 RETURNING *",
-      [name, email, phone, birth_date, gender, id, userId]
+      "UPDATE customers SET name=COALESCE(NULLIF($1,''),name), email=$2, phone=COALESCE(NULLIF($3,''),phone), birth_date=$4, gender=$5 WHERE id=$6 AND user_id=$7 RETURNING *",
+      [name, email || null, phone, birth_date || null, gender || null, id, userId]
     );
     if (result.rows.length === 0) return NextResponse.json({ error: "Not found" }, { status: 404 });
     return NextResponse.json(result.rows[0]);
