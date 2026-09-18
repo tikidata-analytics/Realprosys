@@ -113,7 +113,7 @@ export default function SchemeDetailPage() {
           </div>
           <div className="bg-white rounded-lg px-3 py-2">
             <div className="text-xs text-slate-500">Proyek</div>
-            <div className="font-medium text-slate-800 text-sm truncate">{s.product_name || "-"}</div>
+            <div className="font-medium text-slate-800 text-sm truncate">{s.project_name || "-"}</div>
           </div>
           <div className="bg-white rounded-lg px-3 py-2">
             <div className="text-xs text-slate-500">Produk</div>

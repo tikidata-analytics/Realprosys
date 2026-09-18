@@ -8,11 +8,13 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   try {
     const result = await pool.query(
       `SELECT s.*, c.name as customer_name, p.name as product_name, p.type as product_type, p.price as product_price,
+              pr.name as project_name,
               pp.name as payment_plan_name,
               u.username
        FROM schemes s
        JOIN customers c ON s.customer_id = c.id
        JOIN products p ON s.product_id = p.id
+       JOIN projects pr ON pr.id = p.project_id
        JOIN payment_plans pp ON s.payment_plan_id = pp.id
        JOIN users u ON u.id = s.user_id
        WHERE s.id=$1 AND s.user_id=$2`,
