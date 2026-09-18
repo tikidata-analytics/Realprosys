@@ -77,8 +77,7 @@ interface Props {
 
 export function SchemePdfDocument({ scheme, customer, product, project, nonKprStages, kprSchedule, kprPct, totalKprPrincipal, totalKprInterest, kprMonthlyPayment, kprTenor }: Props) {
   const housePrice = product?.price || 0;
-  const otherTotal = nonKprStages.reduce((s: number, r: any) => s + (r.amount || 0), 0);
-  const kprAmount = housePrice - otherTotal;
+  const kprAmount = housePrice;
 
   return (
     <Document>
@@ -116,10 +115,6 @@ export function SchemePdfDocument({ scheme, customer, product, project, nonKprSt
           <View style={S.summaryCard}>
             <Text style={S.summaryLabel}>Total Tagihan</Text>
             <Text style={S.summaryValue}>Rp {fmt(housePrice)}</Text>
-          </View>
-          <View style={S.summaryCard}>
-            <Text style={S.summaryLabel}>Sudah Dibayar</Text>
-            <Text style={S.summaryValue}>Rp {fmt(otherTotal)}</Text>
           </View>
           {kprAmount > 0 && <>
             <View style={S.summaryCard}>

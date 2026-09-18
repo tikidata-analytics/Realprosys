@@ -49,9 +49,9 @@ export default function SchemeDetailPage() {
     setPdfLoading(true);
     await downloadPdf({
       scheme: { name: scheme.name, username: scheme.username },
-      customer: { name: sched.customerName },
-      product: { name: sched.productName, price: sched.housePrice },
-      project: { name: sched.projectName },
+      customer: { name: s.customer_name },
+      product: { name: s.product_name, price: s.product_price },
+      project: { name: s.project_name },
       nonKprStages,
       kprSchedule,
       kprPct,
