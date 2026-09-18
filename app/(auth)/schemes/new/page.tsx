@@ -13,6 +13,8 @@ export default function NewSchemePage() {
   const [showAllKpr, setShowAllKpr] = useState(false);
   const [paymentPlans, setPaymentPlans] = useState<any[]>([]);
   const [form, setForm] = useState({ name: "", customer_id: "", product_id: "", payment_plan_id: "", booking_date: "" });
+  const [newCustomerName, setNewCustomerName] = useState("");
+  const [showNewCustomer, setShowNewCustomer] = useState(false);
   const [loading, setLoading] = useState(false);
   const [preview, setPreview] = useState<any>(null);
 
@@ -39,7 +41,7 @@ export default function NewSchemePage() {
     const stages = plan.stages || [];
 
     const product = products.find((p) => p.id === form.product_id);
-    const customer = customers.find((c: any) => c.id === form.customer_id);
+    const customer = showNewCustomer ? { name: newCustomerName } : customers.find((c: any) => c.id === form.customer_id);
     if (!product) return;
 
     const housePrice = Number(product.price || 0);
@@ -166,7 +168,14 @@ export default function NewSchemePage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.name || !form.customer_id || !form.product_id || !form.payment_plan_id || !form.booking_date) return;
+
+    if (showNewCustomer && !newCustomerName.trim()) {
+      alert("Nama pelanggan wajib diisi untuk pelanggan baru.");
+      return;
+    }
+
+    if (!form.name || !form.product_id || !form.payment_plan_id || !form.booking_date) return;
+    if (!showNewCustomer && !form.customer_id) return;
 
     // Validate: warn on zero-value non-KPR stages
     const plan = paymentPlans.find((p) => p.id === form.payment_plan_id);
@@ -180,10 +189,27 @@ export default function NewSchemePage() {
     }
 
     setLoading(true);
+
+    let customerId = form.customer_id;
+    if (showNewCustomer) {
+      const cr = await fetch("/api/customers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: newCustomerName.trim(), email: `adhoc_${Date.now()}@temp.local`, phone: "", gender: "" }),
+      });
+      if (!cr.ok) { alert("Gagal membuat pelanggan baru"); setLoading(false); return; }
+      const cd = await cr.json();
+      customerId = cd.id;
+      // Refresh customer list
+      const crlist = await fetch("/api/customers").then(r => r.json());
+      setCustomers(crlist);
+    }
+
+    const payload = { ...form, customer_id: customerId };
     const res = await fetch("/api/schemes", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
+      body: JSON.stringify(payload),
     });
     if (res.ok) {
       const data = await res.json();
@@ -233,11 +259,36 @@ export default function NewSchemePage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Pelanggan <span className="text-red-500">*</span></label>
-              <select value={form.customer_id} onChange={(e) => setForm({ ...form, customer_id: e.target.value })} required
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
-                <option value="">Pilih...</option>
-                {customers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select>
+              <div className="flex gap-2">
+                <select
+                  value={showNewCustomer ? "NEW" : form.customer_id}
+                  onChange={(e) => {
+                    if (e.target.value === "NEW") {
+                      setShowNewCustomer(true);
+                      setForm({ ...form, customer_id: "" });
+                    } else {
+                      setShowNewCustomer(false);
+                      setForm({ ...form, customer_id: e.target.value });
+                    }
+                  }}
+                  required
+                  className="flex-1 px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                >
+                  <option value="">Pilih...</option>
+                  <option value="NEW">+ Tambah Baru</option>
+                  {customers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+              </div>
+              {showNewCustomer && (
+                <input
+                  type="text"
+                  value={newCustomerName}
+                  onChange={(e) => setNewCustomerName(e.target.value)}
+                  placeholder="Nama pelanggan *"
+                  required
+                  className="mt-2 w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                />
+              )}
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Produk <span className="text-red-500">*</span></label>
