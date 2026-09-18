@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import KprChart from "@/components/KprChart";
+import { downloadPdf, SchemePdfDocument } from "@/components/SchemePdfDocument";
+import { pdf } from "@react-pdf/renderer";
 
 function formatCurrency(val: number) {
   return Number(val || 0).toLocaleString("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 });
@@ -13,6 +15,7 @@ export default function SchemeDetailPage() {
   const [scheme, setScheme] = useState<any>(null);
   const [shareToken, setShareToken] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [pdfLoading, setPdfLoading] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -39,6 +42,25 @@ export default function SchemeDetailPage() {
   const shareUrl = `${typeof window !== "undefined" ? window.location.origin : ""}/share/${scheme?.username}/${id}`;
   const copyLink = () => {
     navigator.clipboard.writeText(shareUrl).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); });
+  };
+
+  const handleExportPdf = async () => {
+    if (!scheme || !sched) return;
+    setPdfLoading(true);
+    await downloadPdf({
+      scheme: { name: scheme.name, username: scheme.username },
+      customer: { name: sched.customerName },
+      product: { name: sched.productName, price: sched.housePrice },
+      project: { name: sched.projectName },
+      nonKprStages,
+      kprSchedule,
+      kprPct,
+      totalKprPrincipal,
+      totalKprInterest,
+      kprMonthlyPayment: sched.kprMonthlyPayment || 0,
+      kprTenor: sched.kprTenor || 0,
+    }, `skema-${scheme.name || id}.pdf`);
+    setPdfLoading(false);
   };
 
   if (!scheme) {
@@ -176,11 +198,16 @@ export default function SchemeDetailPage() {
             Share Public Link
           </a>
           <button
-            onClick={() => window.print()}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 text-slate-700 text-xs rounded-lg hover:bg-slate-200 font-medium"
+            onClick={handleExportPdf}
+            disabled={pdfLoading}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 text-slate-700 text-xs rounded-lg hover:bg-slate-200 font-medium disabled:opacity-50"
           >
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 13h6m-3-3v6m-4-9h8a1 1 0 011 1v8a1 1 0 001 1h1" /></svg>
-            Export PDF
+            {pdfLoading ? (
+              <span className="inline-block w-3.5 h-3.5 border-2 border-slate-400 border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 13h6m-3-3v6m-4-9h8a1 1 0 011 1v8a1 1 0 001 1h1" /></svg>
+            )}
+            {pdfLoading ? "Membuat PDF..." : "Export PDF"}
           </button>
           <button
             onClick={copyLink}
