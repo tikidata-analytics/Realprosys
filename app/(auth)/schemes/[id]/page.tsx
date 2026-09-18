@@ -32,8 +32,19 @@ export default function SchemeDetailPage() {
   const sched = s.schedule || {};
   const stages = sched.stages || [];
 
-  const nonKprStages = stages.filter((r: any) => !r.is_kpr);
-  const kprStages = stages.filter((r: any) => r.is_kpr);
+  // ── Unified running balance across ALL stages sorted by date ──
+  const allRows: any[] = stages.map((r) => ({ ...r }));
+  allRows.sort((a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime());
+  let running = housePrice;
+  for (const row of allRows) {
+    row._runningBalance = running;
+    const principal = row.is_kpr ? Number(row.principal) || 0 : Number(row.amount) || 0;
+    running = Math.max(0, running - principal);
+    row._newBalance = running;
+  }
+
+  const nonKprStages = allRows.filter((r: any) => !r.is_kpr);
+  const kprStages = allRows.filter((r: any) => r.is_kpr);
 
   const hasKpr = sched.kprAmount > 0;
 
@@ -144,8 +155,8 @@ export default function SchemeDetailPage() {
                 <tr>
                   <th className="text-left px-3 py-2 font-medium text-slate-600">Tahap</th>
                   <th className="text-left px-3 py-2 font-medium text-slate-600">Tanggal</th>
-                  <th className="text-right px-3 py-2 font-medium text-slate-600">Pembayaran</th>
                   <th className="text-right px-3 py-2 font-medium text-slate-600">Sebelum</th>
+                  <th className="text-right px-3 py-2 font-medium text-slate-600">Pembayaran</th>
                   <th className="text-right px-3 py-2 font-medium text-slate-600">Sesudah</th>
                 </tr>
               </thead>
@@ -169,13 +180,13 @@ export default function SchemeDetailPage() {
                       {new Date(row.due_date).toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "numeric" })}
                     </td>
                     <td className="px-3 py-2 text-right text-slate-700 font-medium">
+                      {Number(row._runningBalance || 0).toLocaleString("id-ID")}
+                    </td>
+                    <td className="px-3 py-2 text-right text-slate-700 font-medium">
                       {Number(row.amount || 0).toLocaleString("id-ID")}
                     </td>
-                    <td className="px-3 py-2 text-right text-slate-500">
-                      {Number(row.sebelum_pengurangan || 0).toLocaleString("id-ID")}
-                    </td>
-                    <td className="px-3 py-2 text-right text-slate-500">
-                      {Number(row.setelah_pengurangan || 0).toLocaleString("id-ID")}
+                    <td className="px-3 py-2 text-right text-slate-700 font-medium">
+                      {Number(row._newBalance || 0).toLocaleString("id-ID")}
                     </td>
                   </tr>
                 ))}
@@ -204,8 +215,8 @@ export default function SchemeDetailPage() {
                   <th className="text-left px-3 py-2 font-medium text-slate-600">Tanggal</th>
                   <th className="text-right px-3 py-2 font-medium text-slate-600">Pokok</th>
                   <th className="text-right px-3 py-2 font-medium text-slate-600">Bunga</th>
-                  <th className="text-right px-3 py-2 font-medium text-slate-600">Pembayaran</th>
                   <th className="text-right px-3 py-2 font-medium text-slate-600">Sebelum</th>
+                  <th className="text-right px-3 py-2 font-medium text-slate-600">Pembayaran</th>
                   <th className="text-right px-3 py-2 font-medium text-slate-600">Sesudah</th>
                 </tr>
               </thead>
@@ -227,13 +238,13 @@ export default function SchemeDetailPage() {
                       {Number(row.interest || 0).toLocaleString("id-ID")}
                     </td>
                     <td className="px-3 py-2 text-right text-slate-700 font-medium">
+                      {Number(row._runningBalance || 0).toLocaleString("id-ID")}
+                    </td>
+                    <td className="px-3 py-2 text-right text-slate-700 font-medium">
                       {Number(row.amount || 0).toLocaleString("id-ID")}
                     </td>
-                    <td className="px-3 py-2 text-right text-slate-500">
-                      {Number(row.sebelum_pengurangan || 0).toLocaleString("id-ID")}
-                    </td>
-                    <td className="px-3 py-2 text-right text-slate-500">
-                      {Number(row.setelah_pengurangan || 0).toLocaleString("id-ID")}
+                    <td className="px-3 py-2 text-right text-slate-700 font-medium">
+                      {Number(row._newBalance || 0).toLocaleString("id-ID")}
                     </td>
                   </tr>
                 ))}

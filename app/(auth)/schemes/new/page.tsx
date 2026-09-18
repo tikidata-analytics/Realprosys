@@ -362,12 +362,12 @@ export default function NewSchemePage() {
                               {new Date(s.due_date).toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "numeric" })}
                             </td>
                             <td className="px-3 py-2 text-right text-slate-700 font-medium">
-                              {Number(s.amount || 0).toLocaleString("id-ID")}
-                            </td>
-                            <td className="px-3 py-2 text-right text-slate-500">
                               {Number(s.sebelum_pengurangan || 0).toLocaleString("id-ID")}
                             </td>
-                            <td className="px-3 py-2 text-right text-slate-500">
+                            <td className="px-3 py-2 text-right text-slate-700 font-medium">
+                              {Number(s.amount || 0).toLocaleString("id-ID")}
+                            </td>
+                            <td className="px-3 py-2 text-right text-slate-700 font-medium">
                               {Number(s.setelah_pengurangan || 0).toLocaleString("id-ID")}
                             </td>
                           </tr>
@@ -396,8 +396,8 @@ export default function NewSchemePage() {
                         <th className="text-left px-3 py-2 font-medium text-slate-600">Tanggal</th>
                         <th className="text-right px-3 py-2 font-medium text-slate-600">Pokok</th>
                         <th className="text-right px-3 py-2 font-medium text-slate-600">Bunga</th>
-                        <th className="text-right px-3 py-2 font-medium text-slate-600">Pembayaran</th>
                         <th className="text-right px-3 py-2 font-medium text-slate-600">Sebelum</th>
+                        <th className="text-right px-3 py-2 font-medium text-slate-600">Pembayaran</th>
                         <th className="text-right px-3 py-2 font-medium text-slate-600">Sesudah</th>
                       </tr>
                     </thead>
@@ -419,12 +419,12 @@ export default function NewSchemePage() {
                             {Number(row.interest || 0).toLocaleString("id-ID")}
                           </td>
                           <td className="px-3 py-2 text-right text-slate-700 font-medium">
-                            {Number(row.amount || 0).toLocaleString("id-ID")}
-                          </td>
-                          <td className="px-3 py-2 text-right text-slate-500">
                             {Number(row.sebelum_pengurangan || 0).toLocaleString("id-ID")}
                           </td>
-                          <td className="px-3 py-2 text-right text-slate-500">
+                          <td className="px-3 py-2 text-right text-slate-700 font-medium">
+                            {Number(row.amount || 0).toLocaleString("id-ID")}
+                          </td>
+                          <td className="px-3 py-2 text-right text-slate-700 font-medium">
                             {Number(row.setelah_pengurangan || 0).toLocaleString("id-ID")}
                           </td>
                         </tr>
