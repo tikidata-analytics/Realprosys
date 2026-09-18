@@ -77,8 +77,8 @@ export async function POST(req: NextRequest) {
     } finally {
       client.release();
     }
-  } catch (err) {
-    console.error(err);
-    return NextResponse.json({ error: "Failed" }, { status: 500 });
+  } catch (err: any) {
+    console.error("PP POST error:", err);
+    return NextResponse.json({ error: err?.message || "Failed" }, { status: 500 });
   }
 }
