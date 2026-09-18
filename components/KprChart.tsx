@@ -91,9 +91,6 @@ export default function KprChart({ schedule }: KprChartProps) {
             </text>
           ))}
 
-          {/* Outstanding balance (red dashed, behind) */}
-          <path d={path("remaining_balance")} fill="none" stroke="#ef4444" strokeWidth="2" strokeDasharray="4,2" />
-
           {/* Main lines */}
           <path d={path("amount")} fill="none" stroke="#3b82f6" strokeWidth="2" />
           <path d={path("principal")} fill="none" stroke="#22c55e" strokeWidth="2" />
@@ -105,10 +102,9 @@ export default function KprChart({ schedule }: KprChartProps) {
               { color: "#3b82f6", label: "Cicilan" },
               { color: "#22c55e", label: "Pokok" },
               { color: "#f97316", label: "Bunga" },
-              { color: "#ef4444", label: "Outstanding", dashed: true },
-            ].map(({ color, label, dashed }, i) => (
+            ].map(({ color, label }, i) => (
               <g key={label} transform={`translate(${i * 100}, 0)`}>
-                <line x1="0" y1="0" x2="14" y2="0" stroke={color} strokeWidth="2" strokeDasharray={dashed ? "4,2" : "none"} />
+                <line x1="0" y1="0" x2="14" y2="0" stroke={color} strokeWidth="2" />
                 <text x="18" y="3" fontSize="9" fill="#475569">{label}</text>
               </g>
             ))}

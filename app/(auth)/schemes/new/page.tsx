@@ -49,6 +49,8 @@ export default function NewSchemePage() {
     let kprTenor = 0;
     const previewStages: any[] = [];
     let currentDate = new Date(form.booking_date);
+
+    // Track the cumulative paid amount (what the customer has paid so far)
     let paidBeforeStage = 0;
 
     const sorted = [...stages].sort((a: any, b: any) => a.stage_order - b.stage_order);
@@ -70,10 +72,12 @@ export default function NewSchemePage() {
         currentDate = new Date(currentDate);
         currentDate.setMonth(currentDate.getMonth() + Number(stage.interval_months));
       }
-      const sebelum = Math.round(paidBeforeStage * 100) / 100;
+      // sebelum = outstanding amount before this non-KPR stage (total - cumulative paid so far)
+      // setelah = outstanding amount after this non-KPR stage (total - cumulative paid including this stage)
+      const unpaidBefore = Math.round((housePrice - paidBeforeStage) * 100) / 100;
       paidBeforeStage += amount;
-      const setelah = Math.round(paidBeforeStage * 100) / 100;
-      previewStages.push({ ...stage, amount, sebelum_pengurangan: sebelum, setelah_pengurangan: setelah, due_date: currentDate.toISOString().split("T")[0] });
+      const unpaidAfter = Math.round((housePrice - paidBeforeStage) * 100) / 100;
+      previewStages.push({ ...stage, amount, sebelum_pengurangan: unpaidBefore, setelah_pengurangan: unpaidAfter, due_date: currentDate.toISOString().split("T")[0] });
     }
 
     const kprAmount = Math.max(0, housePrice - otherTotal);
@@ -371,6 +375,9 @@ export default function NewSchemePage() {
               </div>
             )}
 
+            {/* KPR chart — placed between Non-KPR and KPR tables */}
+            {preview.kprAmount > 0 && <KprChart schedule={preview.kprSchedule} />}
+
             {/* KPR Schedule */}
             {preview.kprSchedule.length > 0 && (
               <div className="bg-white rounded-xl shadow-sm overflow-hidden">
@@ -424,15 +431,12 @@ export default function NewSchemePage() {
               </div>
             )}
 
-            {/* KPR chart — shown only when there's KPR */}
-            {preview.kprAmount > 0 && <KprChart schedule={preview.kprSchedule} />}
+            <button type="submit" disabled={loading}
+              className="px-6 py-3 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition disabled:opacity-50">
+              {loading ? "Menyimpan..." : "Simpan Skema"}
+            </button>
           </div>
         )}
-
-        <button type="submit" disabled={loading}
-          className="px-6 py-3 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition disabled:opacity-50">
-          {loading ? "Menyimpan..." : "Simpan Skema"}
-        </button>
       </form>
     </div>
   );
