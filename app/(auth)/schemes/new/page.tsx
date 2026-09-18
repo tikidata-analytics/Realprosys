@@ -49,18 +49,18 @@ export default function NewSchemePage() {
     let kprTenor = 0;
     const previewStages: any[] = [];
     let currentDate = new Date(form.booking_date);
-    let accumulated = 0;
+    let paidBeforeStage = 0;
 
     const sorted = [...stages].sort((a: any, b: any) => a.stage_order - b.stage_order);
 
     for (const stage of sorted) {
-      if (stage.stage_type === "KPR") {
+      if ((stage.stage_type || "").toUpperCase() === "KPR") {
         kprRate = Number(stage.stage_value || 0);
         kprTenor = Number(stage.interval_months || 0);
         continue;
       }
       let amount = 0;
-      if (stage.amount_type === "PERCENTAGE") {
+      if ((stage.amount_type || "").toUpperCase() === "PERCENTAGE") {
         amount = housePrice * Number(stage.stage_value || 0) / 100;
       } else {
         amount = Number(stage.stage_value || 0);
@@ -70,8 +70,10 @@ export default function NewSchemePage() {
         currentDate = new Date(currentDate);
         currentDate.setMonth(currentDate.getMonth() + Number(stage.interval_months));
       }
-      accumulated += amount;
-      previewStages.push({ ...stage, amount, accumulated, due_date: currentDate.toISOString().split("T")[0] });
+      const sebelum = Math.round(paidBeforeStage * 100) / 100;
+      paidBeforeStage += amount;
+      const setelah = Math.round(paidBeforeStage * 100) / 100;
+      previewStages.push({ ...stage, amount, sebelum_pengurangan: sebelum, setelah_pengurangan: setelah, due_date: currentDate.toISOString().split("T")[0] });
     }
 
     const kprAmount = Math.max(0, housePrice - otherTotal);
@@ -81,42 +83,47 @@ export default function NewSchemePage() {
       const mr = kprRate / 100 / 12;
       const np = kprTenor * 12;
       kprMonthly = (kprAmount * (mr * Math.pow(1 + mr, np))) / (Math.pow(1 + mr, np) - 1);
-      const kprStartDate = new Date(form.booking_date);
+      // KPR starts 1 month after the last non-KPR stage
+      const kprStartDate = new Date(currentDate);
+      kprStartDate.setMonth(kprStartDate.getMonth() + 1);
       let runningBalance = kprAmount;
       for (let i = 1; i <= np; i++) {
         const dueDate = new Date(kprStartDate);
-        dueDate.setMonth(dueDate.getMonth() + i);
+        dueDate.setMonth(dueDate.getMonth() + i - 1);
+        const sebelum = Math.round(runningBalance * 100) / 100;
         const interestPayment = runningBalance * mr;
         const principalPayment = kprMonthly - interestPayment;
         runningBalance -= principalPayment;
+        const setelah = Math.max(0, Math.round(runningBalance * 100) / 100);
         kprSchedule.push({
           due_date: dueDate.toISOString().split("T")[0],
           amount: Math.round(kprMonthly * 100) / 100,
           principal: Math.round(principalPayment * 100) / 100,
           interest: Math.round(interestPayment * 100) / 100,
-          remaining_balance: Math.max(0, Math.round(runningBalance * 100) / 100),
+          sebelum_pengurangan: sebelum,
+          setelah_pengurangan: setelah,
         });
       }
     } else if (kprAmount > 0 && kprTenor > 0) {
-      // No interest rate — force annuity with minimal rate to use correct formula
-      const fakeRate = 0.01;
-      const mr = fakeRate / 100 / 12;
-      const np = kprTenor * 12;
-      kprMonthly = (kprAmount * (mr * Math.pow(1 + mr, np))) / (Math.pow(1 + mr, np) - 1);
-      const kprStartDate = new Date(form.booking_date);
+      // No interest rate — simple division
+      kprMonthly = kprAmount / (kprTenor * 12);
+      const kprStartDate = new Date(currentDate);
+      kprStartDate.setMonth(kprStartDate.getMonth() + 1);
       let runningBalance = kprAmount;
-      for (let i = 1; i <= np; i++) {
+      for (let i = 1; i <= kprTenor * 12; i++) {
         const dueDate = new Date(kprStartDate);
-        dueDate.setMonth(dueDate.getMonth() + i);
-        const interestPayment = runningBalance * mr;
-        const principalPayment = kprMonthly - interestPayment;
+        dueDate.setMonth(dueDate.getMonth() + i - 1);
+        const sebelum = Math.round(runningBalance * 100) / 100;
+        const principalPayment = kprMonthly;
         runningBalance -= principalPayment;
+        const setelah = Math.max(0, Math.round(runningBalance * 100) / 100);
         kprSchedule.push({
           due_date: dueDate.toISOString().split("T")[0],
           amount: Math.round(kprMonthly * 100) / 100,
           principal: Math.round(principalPayment * 100) / 100,
-          interest: Math.round(interestPayment * 100) / 100,
-          remaining_balance: Math.max(0, Math.round(runningBalance * 100) / 100),
+          interest: 0,
+          sebelum_pengurangan: sebelum,
+          setelah_pengurangan: setelah,
         });
       }
     }
@@ -308,11 +315,11 @@ export default function NewSchemePage() {
               )}
             </div>
 
-            {/* Payment Schedule Table — unified, same as detail page */}
+            {/* Non-KPR Schedule */}
             {preview.stages.length > 0 && (
               <div className="bg-white rounded-xl shadow-sm overflow-hidden">
                 <div className="px-4 py-3 border-b border-slate-200">
-                  <h3 className="font-semibold text-slate-800">Jadwal Pembayaran</h3>
+                  <h3 className="font-semibold text-slate-800">Jadwal Pembayaran Non-KPR</h3>
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-xs">
@@ -320,14 +327,9 @@ export default function NewSchemePage() {
                       <tr>
                         <th className="text-left px-3 py-2 font-medium text-slate-600">Tahap</th>
                         <th className="text-left px-3 py-2 font-medium text-slate-600">Tanggal</th>
-                        <th className="text-right px-3 py-2 font-medium text-slate-600">Jumlah</th>
-                        {preview.kprAmount > 0 && (
-                          <>
-                            <th className="text-right px-3 py-2 font-medium text-slate-600">Pokok</th>
-                            <th className="text-right px-3 py-2 font-medium text-slate-600">Bunga</th>
-                            <th className="text-right px-3 py-2 font-medium text-slate-600">Sisa</th>
-                          </>
-                        )}
+                        <th className="text-right px-3 py-2 font-medium text-slate-600">Pembayaran</th>
+                        <th className="text-right px-3 py-2 font-medium text-slate-600">Sebelum</th>
+                        <th className="text-right px-3 py-2 font-medium text-slate-600">Sesudah</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
@@ -340,12 +342,11 @@ export default function NewSchemePage() {
                                 s.stage_type === "BOOKING_FEE" ? "bg-amber-100 text-amber-700" :
                                 s.stage_type === "DOWN_PAYMENT" ? "bg-green-100 text-green-700" :
                                 s.stage_type === "SETTLEMENT" ? "bg-purple-100 text-purple-700" :
-                                "bg-blue-100 text-blue-700"
+                                "bg-slate-100 text-slate-700"
                               }`}>
                                 {s.stage_type === "BOOKING_FEE" ? "Booking Fee" :
                                  s.stage_type === "DOWN_PAYMENT" ? `Uang Muka ${dpCounter || ""}` :
                                  s.stage_type === "SETTLEMENT" ? "Pelunasan" :
-                                 s.stage_type === "KPR" ? `KPR #${idx - preview.stages.filter((st: any) => !st.stage_type || st.stage_type !== "KPR").length + 1}` :
                                  s.stage_type}
                               </span>
                             </td>
@@ -355,17 +356,41 @@ export default function NewSchemePage() {
                             <td className="px-3 py-2 text-right text-slate-700 font-medium">
                               {Number(s.amount || 0).toLocaleString("id-ID")}
                             </td>
-                            {preview.kprAmount > 0 && (
-                              <>
-                                <td className="px-3 py-2 text-right text-slate-400">—</td>
-                                <td className="px-3 py-2 text-right text-slate-400">—</td>
-                                <td className="px-3 py-2 text-right text-slate-400">—</td>
-                              </>
-                            )}
+                            <td className="px-3 py-2 text-right text-slate-500">
+                              {Number(s.sebelum_pengurangan || 0).toLocaleString("id-ID")}
+                            </td>
+                            <td className="px-3 py-2 text-right text-slate-500">
+                              {Number(s.setelah_pengurangan || 0).toLocaleString("id-ID")}
+                            </td>
                           </tr>
                         );
                       })}
-                      {/* KPR rows */}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* KPR Schedule */}
+            {preview.kprSchedule.length > 0 && (
+              <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+                <div className="px-4 py-3 border-b border-slate-200">
+                  <h3 className="font-semibold text-slate-800">Jadwal Pembayaran KPR</h3>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs">
+                    <thead className="bg-slate-50 border-b border-slate-200">
+                      <tr>
+                        <th className="text-left px-3 py-2 font-medium text-slate-600">Angsuran</th>
+                        <th className="text-left px-3 py-2 font-medium text-slate-600">Tanggal</th>
+                        <th className="text-right px-3 py-2 font-medium text-slate-600">Pembayaran</th>
+                        <th className="text-right px-3 py-2 font-medium text-slate-600">Pokok</th>
+                        <th className="text-right px-3 py-2 font-medium text-slate-600">Bunga</th>
+                        <th className="text-right px-3 py-2 font-medium text-slate-600">Sebelum</th>
+                        <th className="text-right px-3 py-2 font-medium text-slate-600">Sesudah</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
                       {preview.kprSchedule.map((row: any, idx: number) => (
                         <tr key={`kpr-${idx}`} className="hover:bg-slate-50">
                           <td className="px-3 py-2">
@@ -385,8 +410,11 @@ export default function NewSchemePage() {
                           <td className="px-3 py-2 text-right text-slate-600">
                             {Number(row.interest || 0).toLocaleString("id-ID")}
                           </td>
-                          <td className="px-3 py-2 text-right text-slate-600">
-                            {Number(row.remaining_balance || 0).toLocaleString("id-ID")}
+                          <td className="px-3 py-2 text-right text-slate-500">
+                            {Number(row.sebelum_pengurangan || 0).toLocaleString("id-ID")}
+                          </td>
+                          <td className="px-3 py-2 text-right text-slate-500">
+                            {Number(row.setelah_pengurangan || 0).toLocaleString("id-ID")}
                           </td>
                         </tr>
                       ))}

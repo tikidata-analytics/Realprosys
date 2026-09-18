@@ -28,6 +28,9 @@ export default function SchemeDetailPage() {
   const sched = s.schedule || {};
   const stages = sched.stages || [];
 
+  const nonKprStages = stages.filter((r: any) => !r.is_kpr);
+  const kprStages = stages.filter((r: any) => r.is_kpr);
+
   return (
     <div>
       <div className="flex items-center gap-3 mb-6">
@@ -48,70 +51,111 @@ export default function SchemeDetailPage() {
         )}
       </div>
 
-      {/* Full Schedule Table */}
-      <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-        <div className="px-4 py-3 border-b border-slate-200">
-          <h3 className="font-semibold text-slate-800">Jadwal Pembayaran</h3>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-xs">
-            <thead className="bg-slate-50 border-b border-slate-200">
-              <tr>
-                <th className="text-left px-3 py-2 font-medium text-slate-600">Tahap</th>
-                <th className="text-left px-3 py-2 font-medium text-slate-600">Tanggal</th>
-                <th className="text-right px-3 py-2 font-medium text-slate-600">Jumlah</th>
-                {stages.some((r: any) => r.is_kpr) && (
-                  <>
-                    <th className="text-right px-3 py-2 font-medium text-slate-600">Pokok</th>
-                    <th className="text-right px-3 py-2 font-medium text-slate-600">Bunga</th>
-                    <th className="text-right px-3 py-2 font-medium text-slate-600">Sisa</th>
-                  </>
-                )}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {stages.map((row: any, idx: number) => (
-                <tr key={idx} className={`hover:bg-slate-50 ${row.is_kpr ? "" : "bg-indigo-50/30"}`}>
-                  <td className="text-left px-3 py-2">
-                    <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${
-                      row.is_kpr ? "bg-blue-100 text-blue-700" :
-                      row.stage_type === "BOOKING_FEE" ? "bg-amber-100 text-amber-700" :
-                      row.stage_type === "DOWN_PAYMENT" ? "bg-green-100 text-green-700" :
-                      "bg-purple-100 text-purple-700"
-                    }`}>
-                      {row.stage_type === "BOOKING_FEE" ? "Booking Fee" :
-                       row.stage_type === "DOWN_PAYMENT" ? "Uang Muka" :
-                       row.stage_type === "SETTLEMENT" ? "Pelunasan" :
-                       row.is_kpr ? `KPR #${idx - stages.filter((s: any) => !s.is_kpr).length}` : row.stage_type}
-                    </span>
-                  </td>
-                  <td className="text-left px-3 py-2 text-slate-700">
-                    {new Date(row.due_date).toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "numeric" })}
-                  </td>
-                  <td className="text-right px-3 py-2 text-slate-700 font-medium">
-                    {Number(row.amount).toLocaleString("id-ID")}
-                  </td>
-                  {row.is_kpr && (
-                    <>
-                      <td className="text-right px-3 py-2 text-slate-600">{Number(row.principal || 0).toLocaleString("id-ID")}</td>
-                      <td className="text-right px-3 py-2 text-slate-600">{Number(row.interest || 0).toLocaleString("id-ID")}</td>
-                      <td className="text-right px-3 py-2 text-slate-600">{Number(row.remaining_balance || 0).toLocaleString("id-ID")}</td>
-                    </>
-                  )}
-                  {!row.is_kpr && !stages.some((r: any) => r.is_kpr) && (
-                    <>
-                      <td className="text-right px-3 py-2 text-slate-400">—</td>
-                      <td className="text-right px-3 py-2 text-slate-400">—</td>
-                      <td className="text-right px-3 py-2 text-slate-400">—</td>
-                    </>
-                  )}
-                  {row.is_kpr && !stages.some((r: any) => r.is_kpr) && null}
+      {/* Non-KPR Table */}
+      {nonKprStages.length > 0 && (
+        <div className="bg-white rounded-xl shadow-sm overflow-hidden mb-6">
+          <div className="px-4 py-3 border-b border-slate-200">
+            <h3 className="font-semibold text-slate-800">Jadwal Pembayaran Non-KPR</h3>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead className="bg-slate-50 border-b border-slate-200">
+                <tr>
+                  <th className="text-left px-3 py-2 font-medium text-slate-600">Tahap</th>
+                  <th className="text-left px-3 py-2 font-medium text-slate-600">Tanggal</th>
+                  <th className="text-right px-3 py-2 font-medium text-slate-600">Pembayaran</th>
+                  <th className="text-right px-3 py-2 font-medium text-slate-600">Sebelum</th>
+                  <th className="text-right px-3 py-2 font-medium text-slate-600">Sesudah</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {nonKprStages.map((row: any, idx: number) => (
+                  <tr key={idx} className="hover:bg-slate-50">
+                    <td className="px-3 py-2">
+                      <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${
+                        row.stage_type === "BOOKING_FEE" ? "bg-amber-100 text-amber-700" :
+                        row.stage_type === "DOWN_PAYMENT" ? "bg-green-100 text-green-700" :
+                        row.stage_type === "SETTLEMENT" ? "bg-purple-100 text-purple-700" :
+                        "bg-slate-100 text-slate-700"
+                      }`}>
+                        {row.stage_type === "BOOKING_FEE" ? "Booking Fee" :
+                         row.stage_type === "DOWN_PAYMENT" ? "Uang Muka" :
+                         row.stage_type === "SETTLEMENT" ? "Pelunasan" :
+                         row.stage_type}
+                      </span>
+                    </td>
+                    <td className="px-3 py-2 text-slate-700">
+                      {new Date(row.due_date).toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "numeric" })}
+                    </td>
+                    <td className="px-3 py-2 text-right text-slate-700 font-medium">
+                      {Number(row.amount || 0).toLocaleString("id-ID")}
+                    </td>
+                    <td className="px-3 py-2 text-right text-slate-500">
+                      {Number(row.sebelum_pengurangan || 0).toLocaleString("id-ID")}
+                    </td>
+                    <td className="px-3 py-2 text-right text-slate-500">
+                      {Number(row.setelah_pengurangan || 0).toLocaleString("id-ID")}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
+      )}
+
+      {/* KPR Table */}
+      {kprStages.length > 0 && (
+        <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+          <div className="px-4 py-3 border-b border-slate-200">
+            <h3 className="font-semibold text-slate-800">Jadwal Pembayaran KPR</h3>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead className="bg-slate-50 border-b border-slate-200">
+                <tr>
+                  <th className="text-left px-3 py-2 font-medium text-slate-600">Angsuran</th>
+                  <th className="text-left px-3 py-2 font-medium text-slate-600">Tanggal</th>
+                  <th className="text-right px-3 py-2 font-medium text-slate-600">Pembayaran</th>
+                  <th className="text-right px-3 py-2 font-medium text-slate-600">Pokok</th>
+                  <th className="text-right px-3 py-2 font-medium text-slate-600">Bunga</th>
+                  <th className="text-right px-3 py-2 font-medium text-slate-600">Sebelum</th>
+                  <th className="text-right px-3 py-2 font-medium text-slate-600">Sesudah</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {kprStages.map((row: any, idx: number) => (
+                  <tr key={idx} className="hover:bg-slate-50">
+                    <td className="px-3 py-2">
+                      <span className="inline-block px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-700">
+                        KPR #{idx + 1}
+                      </span>
+                    </td>
+                    <td className="px-3 py-2 text-slate-700">
+                      {new Date(row.due_date).toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "numeric" })}
+                    </td>
+                    <td className="px-3 py-2 text-right text-slate-700 font-medium">
+                      {Number(row.amount || 0).toLocaleString("id-ID")}
+                    </td>
+                    <td className="px-3 py-2 text-right text-slate-600">
+                      {Number(row.principal || 0).toLocaleString("id-ID")}
+                    </td>
+                    <td className="px-3 py-2 text-right text-slate-600">
+                      {Number(row.interest || 0).toLocaleString("id-ID")}
+                    </td>
+                    <td className="px-3 py-2 text-right text-slate-500">
+                      {Number(row.sebelum_pengurangan || 0).toLocaleString("id-ID")}
+                    </td>
+                    <td className="px-3 py-2 text-right text-slate-500">
+                      {Number(row.setelah_pengurangan || 0).toLocaleString("id-ID")}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {/* KPR Chart */}
       {sched.kprAmount > 0 && sched.kprSchedule && (

@@ -59,9 +59,12 @@ export async function POST(req: NextRequest) {
 
     let currentDate = new Date(booking_date);
 
+    // Running total of what buyer has paid before this stage
+    let paidBeforeStage = 0;
+
     for (const stage of sortedStages) {
-      const stageType: string = stage.stage_type;
-      const amountType: string = stage.amount_type;
+      const stageType: string = (stage.stage_type || "").trim().toUpperCase();
+      const amountType: string = (stage.amount_type || "").trim().toUpperCase();
       const value = Number(stage.stage_value || 0);
       const intervalMonths = Number(stage.interval_months || 0);
 
@@ -86,10 +89,18 @@ export async function POST(req: NextRequest) {
         currentDate.setMonth(currentDate.getMonth() + intervalMonths);
       }
 
+      // sebelum_pengurangan = total yang sudah dibayar SEBELUM tahap ini
+      // setelah_pengurangan = total yang sudah dibayar SETELAH tahap ini
+      const sebelum = Math.round(paidBeforeStage * 100) / 100;
+      paidBeforeStage += amount;
+      const setelah = Math.round(paidBeforeStage * 100) / 100;
+
       scheduleRows.push({
         stage_type: stageType,
         due_date: currentDate.toISOString().split("T")[0],
         amount: Math.round(amount * 100) / 100,
+        sebelum_pengurangan: sebelum,
+        setelah_pengurangan: setelah,
         is_kpr: false,
       });
     }
@@ -110,21 +121,27 @@ export async function POST(req: NextRequest) {
     }
 
     if (kprAmount > 0 && kprTenor > 0) {
-      const kprStartDate = new Date(booking_date);
+      // KPR starts 1 month after the last non-KPR stage's due date
+      const kprStartDate = new Date(currentDate);
+      kprStartDate.setMonth(kprStartDate.getMonth() + 1);
       let runningBalance = kprAmount;
       for (let i = 1; i <= kprTenor * 12; i++) {
         const dueDate = new Date(kprStartDate);
-        dueDate.setMonth(dueDate.getMonth() + i);
-        let interestPayment = runningBalance * (kprRate / 100 / 12);
-        let principalPayment = kprMonthlyPayment - interestPayment;
+        dueDate.setMonth(dueDate.getMonth() + i - 1);
+        // sebelum = saldo SEBELUM pembayaran ini (simpan SEBELUM kurangi)
+        const sebelum = Math.round(runningBalance * 100) / 100;
+        const interestPayment = runningBalance * (kprRate / 100 / 12);
+        const principalPayment = kprMonthlyPayment - interestPayment;
         runningBalance -= principalPayment;
+        const setelah = Math.max(0, Math.round(runningBalance * 100) / 100);
         scheduleRows.push({
           stage_type: "KPR",
           due_date: dueDate.toISOString().split("T")[0],
           amount: Math.round(kprMonthlyPayment * 100) / 100,
           principal: Math.round(principalPayment * 100) / 100,
           interest: Math.round(interestPayment * 100) / 100,
-          remaining_balance: Math.max(0, Math.round(runningBalance * 100) / 100),
+          sebelum_pengurangan: sebelum,
+          setelah_pengurangan: setelah,
           is_kpr: true,
         });
       }
