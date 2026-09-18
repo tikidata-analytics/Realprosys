@@ -304,7 +304,7 @@ export default function NewSchemePage() {
                   </div>
                   <div className="bg-white rounded-lg px-3 py-2">
                     <div className="text-xs text-slate-500">Tenor</div>
-                    <div className="font-bold text-blue-700">{preview.kprTenor / 12} tahun</div>
+                    <div className="font-bold text-blue-700">{preview.kprTenor} tahun</div>
                   </div>
                   <div className="bg-white rounded-lg px-3 py-2">
                     <div className="text-xs text-slate-500">Total Pokok KPR</div>
