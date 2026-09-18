@@ -31,7 +31,8 @@ export default function NewSchemePage() {
   }, []);
 
   const handlePreview = async () => {
-    if (!form.customer_id || !form.product_id || !form.payment_plan_id || !form.booking_date) return;
+    if ((!showNewCustomer && !form.customer_id) || !form.product_id || !form.payment_plan_id || !form.booking_date) return;
+    if (showNewCustomer && !newCustomerName.trim()) return;
     setPreview(null);
 
     // Fetch plan directly to ensure fresh data
