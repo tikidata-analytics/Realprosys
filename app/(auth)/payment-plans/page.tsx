@@ -96,11 +96,14 @@ export default function PaymentPlansPage() {
     const expandedStages: any[] = [];
     for (const s of stages) {
       const count = Math.max(1, parseInt(String(s.count)) || 1);
+      const val = parseFloat(String(s.stage_value)) || 0;
       for (let c = 0; c < count; c++) {
+        // Divide value equally across count
+        const splitVal = count > 1 ? Math.round((val / count) * 100) / 100 : val;
         expandedStages.push({
           stage_type: s.stage_type,
           amount_type: s.amount_type,
-          stage_value: s.stage_value,
+          stage_value: splitVal,
           interval_months: c === 0 ? s.interval_months : s.interval_months,
         });
       }
