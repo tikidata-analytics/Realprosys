@@ -25,7 +25,7 @@ export default function LoginPage() {
       if (!res.ok) {
         setError(data.error || "Login gagal");
       } else {
-        window.location.href = "/dashboard";
+        router.push("/dashboard");
       }
     } catch {
       setError("Koneksi gagal. Coba lagi.");
