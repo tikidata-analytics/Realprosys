@@ -31,12 +31,33 @@ export default function SchemeDetailPage() {
   const s = scheme;
   const sched = s.schedule || {};
   const stages = sched.stages || [];
-  const kprSchedule = sched.kprSchedule || [];
 
   const nonKprStages = stages.filter((r: any) => !r.is_kpr);
   const kprStages = stages.filter((r: any) => r.is_kpr);
 
   const hasKpr = sched.kprAmount > 0;
+
+  // Reconstruct kprSchedule + computed fields from stored kprStages
+  let kprSchedule: any[] = [];
+  if (hasKpr && kprStages.length > 0) {
+    let runningBalance = sched.kprAmount;
+    for (const row of kprStages) {
+      const principal = Number(row.principal || 0);
+      const interest = Number(row.interest || 0);
+      runningBalance -= principal;
+      kprSchedule.push({
+        due_date: row.due_date,
+        amount: row.amount,
+        principal,
+        interest,
+        remaining_balance: Math.max(0, runningBalance),
+      });
+    }
+  }
+  const kprPct = sched.housePrice > 0 ? Math.round(sched.kprAmount / sched.housePrice * 10000) / 100 : 0;
+  const totalKprInterest = kprSchedule.reduce((s, r) => s + r.interest, 0);
+  const totalKprPrincipal = kprSchedule.reduce((s, r) => s + r.principal, 0);
+  const bungaPct = sched.housePrice > 0 ? Math.round(totalKprInterest / sched.housePrice * 10000) / 100 : 0;
 
   return (
     <div>
@@ -76,37 +97,33 @@ export default function SchemeDetailPage() {
           <div className="bg-white rounded-lg px-3 py-2">
             <div className="text-xs text-slate-500">Total Tagihan</div>
             <div className="font-bold text-indigo-900">{formatCurrency(sched.housePrice)}</div>
-          </div>
-          <div className="bg-white rounded-lg px-3 py-2">
-            <div className="text-xs text-slate-500">Sudah Dibayar</div>
-            <div className="font-bold text-green-700">{formatCurrency(sched.otherTotal || 0)}</div>
-          </div>
-          {hasKpr ? (
+            </div>
+            {hasKpr ? (
             <>
               <div className="bg-white rounded-lg px-3 py-2">
                 <div className="text-xs text-slate-500">Pinjaman KPR</div>
                 <div className="font-bold text-blue-700">
                   {formatCurrency(sched.kprAmount)}
-                  <span className="text-xs font-normal text-blue-500">
-                    ({sched.kprPct ? sched.kprPct.toFixed(2) : "0"}%)
-                  </span>
+                  <span className="text-xs font-normal text-blue-500"> ({kprPct}%)</span>
                 </div>
               </div>
               <div className="bg-white rounded-lg px-3 py-2">
+                <div className="text-xs text-slate-500">Cicilan/Bulan</div>
+                <div className="font-bold text-blue-700">{formatCurrency(sched.kprMonthlyPayment || 0)}</div>
+              </div>
+              <div className="bg-white rounded-lg px-3 py-2">
                 <div className="text-xs text-slate-500">Total Pokok KPR</div>
-                <div className="font-bold text-blue-700">{formatCurrency(sched.totalKprPrincipal || sched.kprAmount)}</div>
+                <div className="font-bold text-blue-700">{formatCurrency(totalKprPrincipal)}</div>
               </div>
               <div className="bg-white rounded-lg px-3 py-2">
                 <div className="text-xs text-slate-500">Total Bunga KPR</div>
                 <div className="font-bold text-blue-700">
-                  {formatCurrency(sched.totalKprInterest || 0)}
-                  <span className="text-xs font-normal text-blue-500">
-                    ({sched.housePrice > 0 ? ((sched.totalKprInterest || 0) / sched.housePrice * 100).toFixed(2) : "0"}%)
-                  </span>
+                  {formatCurrency(totalKprInterest)}
+                  <span className="text-xs font-normal text-blue-500"> ({bungaPct}%)</span>
                 </div>
               </div>
             </>
-          ) : (
+            ) : (
             <div className="col-span-3 bg-amber-50 rounded-lg px-3 py-2 border border-amber-200">
               <div className="text-xs text-amber-600">Tanpa KPR</div>
               <div className="font-bold text-amber-800">Cash / Pelunasan bertahap</div>
