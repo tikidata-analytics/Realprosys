@@ -108,6 +108,16 @@ export default function NewSchemePage() {
       }
     }
 
+    // Build dp counters for labeling
+    const dpCounters: Record<number, string> = {};
+    let dpSeq = 0;
+    for (const stage of sorted) {
+      if (stage.stage_type === "DOWN_PAYMENT") {
+        dpSeq++;
+        dpCounters[stage.stage_order] = String(dpSeq);
+      }
+    }
+
     setPreview({
       housePrice,
       customerName: customer?.name || "-",
@@ -120,6 +130,7 @@ export default function NewSchemePage() {
       kprRate,
       kprSchedule,
       otherTotal,
+      dpCounters,
     });
   };
 
@@ -269,13 +280,14 @@ export default function NewSchemePage() {
                     <tr>
                       <th className="text-left px-3 py-2 font-medium text-indigo-700">Tahap</th>
                       <th className="text-left px-3 py-2 font-medium text-indigo-700">Tanggal</th>
-                      <th className="text-right px-3 py-2 font-medium text-indigo-700">Jumlah</th>
                       <th className="text-right px-3 py-2 font-medium text-indigo-700">Sisa Sebelum</th>
+                      <th className="text-right px-3 py-2 font-medium text-indigo-700">Tagihan</th>
                       <th className="text-right px-3 py-2 font-medium text-indigo-700">Sisa Sesudah</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-indigo-100">
                     {preview.stages.map((s: any, i: number) => {
+                      const dpCounter = s.stage_type === "DOWN_PAYMENT" ? preview.dpCounters[s.stage_order] : null;
                       const sisaSesudah = Math.max(0, preview.housePrice - (s.accumulated || 0));
                       return (
                         <tr key={i} className="bg-white">
@@ -287,14 +299,14 @@ export default function NewSchemePage() {
                               "bg-blue-100 text-blue-700"
                             }`}>
                               {s.stage_type === "BOOKING_FEE" ? "Booking Fee" :
-                               s.stage_type === "DOWN_PAYMENT" ? "Uang Muka" :
+                               s.stage_type === "DOWN_PAYMENT" ? `Uang Muka ${dpCounter || ""}` :
                                s.stage_type === "SETTLEMENT" ? "Pelunasan" :
                                s.stage_type === "KPR" ? "KPR" : s.stage_type}
                             </span>
                           </td>
                           <td className="px-3 py-2 text-slate-600">{formatDate(s.due_date)}</td>
-                          <td className="px-3 py-2 text-right font-medium text-slate-800">{formatCurrency(s.amount)}</td>
                           <td className="px-3 py-2 text-right text-slate-500">{formatCurrency(sisaSesudah + s.amount)}</td>
+                          <td className="px-3 py-2 text-right font-medium text-slate-800">{formatCurrency(s.amount)}</td>
                           <td className="px-3 py-2 text-right font-medium text-slate-800">{formatCurrency(sisaSesudah)}</td>
                         </tr>
                       );
