@@ -8,7 +8,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   const { id } = await params;
   try {
     const result = await pool.query(
-      "SELECT * FROM customers WHERE id = $1 AND user_id = $2",
+      "SELECT id, user_id, name, email, phone, birth_date, gender, created_at FROM customers WHERE id = $1 AND user_id = $2",
       [id, userId]
     );
     if (result.rows.length === 0) return NextResponse.json({ error: "Not found" }, { status: 404 });

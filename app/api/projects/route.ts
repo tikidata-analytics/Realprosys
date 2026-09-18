@@ -6,7 +6,7 @@ export async function GET(req: NextRequest) {
   const userId = req.headers.get("x-user-id");
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   try {
-    const result = await pool.query("SELECT * FROM projects WHERE user_id = $1 ORDER BY created_at DESC", [userId]);
+    const result = await pool.query("SELECT id, user_id, name, location, created_at FROM projects WHERE user_id = $1 ORDER BY created_at DESC", [userId]);
     return NextResponse.json(result.rows);
   } catch { return NextResponse.json({ error: "Failed" }, { status: 500 }); }
 }

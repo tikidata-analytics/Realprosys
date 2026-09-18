@@ -7,7 +7,7 @@ export async function GET(req: NextRequest) {
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   try {
     const result = await pool.query(
-      "SELECT * FROM payment_plans WHERE user_id = $1 ORDER BY created_at DESC",
+      "SELECT id, user_id, name, down_payment_pct, loan_tenor_years, interest_rate, created_at FROM payment_plans WHERE user_id = $1 ORDER BY created_at DESC",
       [userId]
     );
     return NextResponse.json(result.rows);

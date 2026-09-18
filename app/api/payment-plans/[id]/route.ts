@@ -6,7 +6,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const { id } = await params;
   try {
-    const result = await pool.query("SELECT * FROM payment_plans WHERE id=$1 AND user_id=$2", [id, userId]);
+    const result = await pool.query("SELECT id, user_id, name, down_payment_pct, loan_tenor_years, interest_rate, created_at FROM payment_plans WHERE id=$1 AND user_id=$2", [id, userId]);
     if (result.rows.length === 0) return NextResponse.json({ error: "Not found" }, { status: 404 });
     return NextResponse.json(result.rows[0]);
   } catch { return NextResponse.json({ error: "Failed" }, { status: 500 }); }
