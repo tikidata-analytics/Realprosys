@@ -18,24 +18,27 @@ export default function SchemeDetailPage() {
     if (!id) return;
     fetch(`/api/schemes/${id}`)
       .then((r) => r.json())
-      .then((data) => { setScheme(data); setShareToken(data.share_token || null); })
+      .then(async (data) => {
+        setScheme(data);
+        if (!data.share_token) {
+          // Auto-enable sharing
+          const res = await fetch(`/api/schemes/${id}/share`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ enabled: true }),
+          });
+          const d = await res.json();
+          setShareToken(d.share_token || null);
+        } else {
+          setShareToken(data.share_token);
+        }
+      })
       .catch(console.error);
   }, [id]);
 
-  const toggleShare = async () => {
-    const enabled = !shareToken;
-    const res = await fetch(`/api/schemes/${id}/share`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ enabled }),
-    });
-    const data = await res.json();
-    if (res.ok) setShareToken(enabled ? data.share_token : null);
-  };
-
+  const shareUrl = `${typeof window !== "undefined" ? window.location.origin : ""}/share/${scheme?.username}/${id}`;
   const copyLink = () => {
-    const url = `${window.location.origin}/share/${scheme.username}/${id}`;
-    navigator.clipboard.writeText(url).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); });
+    navigator.clipboard.writeText(shareUrl).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); });
   };
 
   if (!scheme) {
@@ -91,29 +94,12 @@ export default function SchemeDetailPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <a href="/schemes" className="text-slate-400 hover:text-slate-600">← Skema</a>
-          <h2 className="text-xl font-bold text-slate-900">{s.name}</h2>
-        </div>
-        <div className="flex items-center gap-2">
-          {shareToken ? (
-            <>
-              <button onClick={copyLink} className="px-3 py-1.5 bg-green-600 text-white text-xs rounded-lg hover:bg-green-700 font-medium">
-                {copied ? "✓ Tersalin!" : "📋 Copy Link"}
-              </button>
-              <a href={`/share/${s.username}/${id}`} target="_blank" rel="noopener noreferrer" className="px-3 py-1.5 bg-green-100 text-green-700 text-xs rounded-lg hover:bg-green-200">
-                🔗 Buka
-              </a>
-            </>
-          ) : null}
-          <button onClick={toggleShare} className={`px-3 py-1.5 text-xs rounded-lg font-medium ${shareToken ? "bg-red-100 text-red-600 hover:bg-red-200" : "bg-indigo-600 text-white hover:bg-indigo-700"}`}>
-            {shareToken ? "Nonaktifkan Share" : "Aktifkan Share"}
-          </button>
-        </div>
+      <div className="flex items-center gap-3 mb-6">
+        <a href="/schemes" className="text-slate-400 hover:text-slate-600">← Skema</a>
+        <h2 className="text-xl font-bold text-slate-900">{s.name}</h2>
       </div>
 
-      {/* Summary — matches create preview */}
+      {/* Summary */}
       <div className="bg-indigo-50 rounded-xl p-6 space-y-4 mb-6">
         <div className="flex items-center justify-between">
           <h3 className="font-semibold text-indigo-900">{s.name}</h3>
@@ -176,6 +162,35 @@ export default function SchemeDetailPage() {
               <div className="font-bold text-amber-800">Cash / Pelunasan bertahap</div>
             </div>
           )}
+        </div>
+
+        {/* Share buttons */}
+        <div className="flex items-center gap-2 pt-1">
+          <a
+            href={shareUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 text-white text-xs rounded-lg hover:bg-indigo-700 font-medium"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+            Share Public Link
+          </a>
+          <button
+            onClick={copyLink}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 text-slate-700 text-xs rounded-lg hover:bg-slate-200 font-medium"
+          >
+            {copied ? (
+              <>
+                <svg className="w-3.5 h-3.5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                Tersalin!
+              </>
+            ) : (
+              <>
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                Copy Link
+              </>
+            )}
+          </button>
         </div>
       </div>
 
