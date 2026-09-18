@@ -10,7 +10,7 @@ function formatCurrency(val: number) {
 }
 
 export default function SharePage() {
-  const { username, schemeId } = useParams();
+  const { username, schemeId } = useParams() as { username: string; schemeId: string };
   const [data, setData] = useState<any>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);

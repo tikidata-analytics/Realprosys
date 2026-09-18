@@ -3,10 +3,10 @@ import pool from "@/lib/db";
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { username: string; schemeId: string } }
+  { params }: { params: Promise<{ username: string; schemeId: string }> }
 ) {
   try {
-    const { username, schemeId } = params;
+    const { username, schemeId } = await params;
 
     // Look up user by username
     const users = await pool.query(
