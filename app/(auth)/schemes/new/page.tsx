@@ -382,7 +382,7 @@ export default function NewSchemePage() {
             {preview.kprSchedule.length > 0 && (
               <div className="bg-white rounded-xl shadow-sm overflow-hidden">
                 <div className="px-4 py-3 border-b border-slate-200">
-                  <h3 className="font-semibold text-slate-800">Jadwal Pembayaran KPR — Tenor {preview.kprTenor} tahun</h3>
+                  <h3 className="font-semibold text-slate-800">Jadwal Pembayaran KPR — Tenor {preview.kprTenor / 12} tahun</h3>
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-xs">
