@@ -17,9 +17,9 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const { email, password, name } = await req.json();
+    const { email, password, name, username } = await req.json();
 
-    if (!email || !password || !name) {
+    if (!email || !password || !name || !username) {
       return NextResponse.json({ error: "Semua field wajib diisi" }, { status: 400 });
     }
 
@@ -27,25 +27,31 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Password minimal 8 karakter, harus ada huruf besar, huruf kecil, dan angka." }, { status: 400 });
     }
 
-    const normalizedEmail = email.toLowerCase().trim();
+    if (!/^[a-zA-Z0-9_]{3,20}$/.test(username)) {
+      return NextResponse.json({ error: "Username 3-20 karakter, hanya huruf, angka, dan underscore." }, { status: 400 });
+    }
 
-    const existing = await pool.query(
-      "SELECT id FROM users WHERE LOWER(email) = LOWER($1)",
-      [normalizedEmail]
-    );
-    if (existing.rows.length > 0) {
+    const normalizedEmail = email.toLowerCase().trim();
+    const normalizedUsername = username.toLowerCase().trim();
+
+    const [existingEmail, existingUsername] = await Promise.all([
+      pool.query("SELECT id FROM users WHERE LOWER(email) = LOWER($1)", [normalizedEmail]),
+      pool.query("SELECT id FROM users WHERE LOWER(username) = LOWER($1)", [normalizedUsername]),
+    ]);
+    if (existingEmail.rows.length > 0) {
       return NextResponse.json({ error: "Email sudah terdaftar" }, { status: 409 });
+    }
+    if (existingUsername.rows.length > 0) {
+      return NextResponse.json({ error: "Username sudah digunakan" }, { status: 409 });
     }
 
     const passwordHash = await hashPassword(password);
     const id = generateId();
-
-    // Get token_version (default 1 for new users)
     const tokenVersion = 1;
 
     await pool.query(
-      "INSERT INTO users (id, email, password_hash, name, token_version) VALUES ($1, $2, $3, $4, $5)",
-      [id, normalizedEmail, passwordHash, name, tokenVersion]
+      "INSERT INTO users (id, email, username, password_hash, name, token_version) VALUES ($1, $2, $3, $4, $5, $6)",
+      [id, normalizedEmail, normalizedUsername, passwordHash, name.trim(), tokenVersion]
     );
 
     const token = await createToken(id, tokenVersion);

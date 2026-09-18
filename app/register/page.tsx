@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 export default function RegisterPage() {
   const router = useRouter();
   const [name, setName] = useState("");
+  const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -20,7 +21,7 @@ export default function RegisterPage() {
       const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, password }),
+        body: JSON.stringify({ name, username, email, password }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -51,6 +52,14 @@ export default function RegisterPage() {
             <input type="text" value={name} onChange={(e) => setName(e.target.value)}
               className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none"
               required />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Username <span className="text-red-500">*</span></label>
+            <input type="text" value={username} onChange={(e) => setUsername(e.target.value.toLowerCase())}
+              placeholder="contoh: budi_agent"
+              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+              required minLength={3} maxLength={20} pattern="[a-zA-Z0-9_]+" />
+            <p className="text-xs text-slate-400 mt-1">3-20 karakter, huruf, angka, underscore</p>
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
