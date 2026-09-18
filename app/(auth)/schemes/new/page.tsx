@@ -9,6 +9,7 @@ export default function NewSchemePage() {
   const router = useRouter();
   const [customers, setCustomers] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
+  const [showAllKpr, setShowAllKpr] = useState(false);
   const [paymentPlans, setPaymentPlans] = useState<any[]>([]);
   const [form, setForm] = useState({ name: "", customer_id: "", product_id: "", payment_plan_id: "", booking_date: "" });
   const [loading, setLoading] = useState(false);
@@ -347,7 +348,7 @@ export default function NewSchemePage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-blue-100">
-                    {(preview.kprSchedule || []).slice(0, 6).map((row: any, i: number) => (
+                    {(preview.kprSchedule || []).slice(0, showAllKpr ? undefined : 6).map((row: any, i: number) => (
                       <tr key={i} className="bg-white">
                         <td className="px-3 py-1 text-slate-500">{i + 1}</td>
                         <td className="px-3 py-1 text-slate-600">{formatDate(row.due_date)}</td>
@@ -361,8 +362,11 @@ export default function NewSchemePage() {
                   {(preview.kprSchedule || []).length > 6 && (
                     <tfoot>
                       <tr className="bg-slate-50">
-                        <td colSpan={6} className="px-3 py-1 text-center text-xs text-slate-500">
-                          + {(preview.kprSchedule || []).length - 6} bulan lagi...
+                        <td colSpan={6} className="px-3 py-2 text-center">
+                          <button onClick={() => setShowAllKpr(!showAllKpr)}
+                            className="text-xs text-indigo-600 hover:text-indigo-800 font-medium">
+                            {showAllKpr ? "▲ Sembunyikan" : `▼ Lihat semua ${preview.kprSchedule.length} bulan`}
+                          </button>
                         </td>
                       </tr>
                     </tfoot>
