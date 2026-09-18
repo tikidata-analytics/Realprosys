@@ -4,6 +4,10 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import KprChart from "@/components/KprChart";
 
+function formatCurrency(val: number) {
+  return Number(val || 0).toLocaleString("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 });
+}
+
 export default function SchemeDetailPage() {
   const { id } = useParams();
   const [scheme, setScheme] = useState<any>(null);
@@ -27,9 +31,12 @@ export default function SchemeDetailPage() {
   const s = scheme;
   const sched = s.schedule || {};
   const stages = sched.stages || [];
+  const kprSchedule = sched.kprSchedule || [];
 
   const nonKprStages = stages.filter((r: any) => !r.is_kpr);
   const kprStages = stages.filter((r: any) => r.is_kpr);
+
+  const hasKpr = sched.kprAmount > 0;
 
   return (
     <div>
@@ -38,17 +45,74 @@ export default function SchemeDetailPage() {
         <h2 className="text-xl font-bold text-slate-900">{s.name}</h2>
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <SummaryCard label="Pelanggan" value={s.customer_name} />
-        <SummaryCard label="Produk" value={s.product_name} />
-        <SummaryCard label="Harga" value={Number(sched.housePrice || 0).toLocaleString("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 })} />
-        {sched.kprAmount > 0 && (
-          <>
-            <SummaryCard label="Pinjaman KPR" value={Number(sched.kprAmount).toLocaleString("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 })} />
-            <SummaryCard label="Cicilan/Bulan" value={Number(sched.kprMonthlyPayment || 0).toLocaleString("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 })} />
-          </>
-        )}
+      {/* Summary — matches create preview */}
+      <div className="bg-indigo-50 rounded-xl p-6 space-y-4 mb-6">
+        <div className="flex items-center justify-between">
+          <h3 className="font-semibold text-indigo-900">{s.name}</h3>
+        </div>
+
+        {/* Info header */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+          <div className="bg-white rounded-lg px-3 py-2">
+            <div className="text-xs text-slate-500">Pelanggan</div>
+            <div className="font-medium text-slate-800 text-sm truncate">{s.customer_name || "-"}</div>
+          </div>
+          <div className="bg-white rounded-lg px-3 py-2">
+            <div className="text-xs text-slate-500">Proyek</div>
+            <div className="font-medium text-slate-800 text-sm truncate">{s.product_name || "-"}</div>
+          </div>
+          <div className="bg-white rounded-lg px-3 py-2">
+            <div className="text-xs text-slate-500">Produk</div>
+            <div className="font-medium text-slate-800 text-sm truncate">{s.product_name || "-"}</div>
+          </div>
+          <div className="bg-white rounded-lg px-3 py-2">
+            <div className="text-xs text-slate-500">Harga Rumah</div>
+            <div className="font-medium text-slate-800 text-sm">{formatCurrency(sched.housePrice)}</div>
+          </div>
+        </div>
+
+        {/* Summary metrics */}
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3 text-sm">
+          <div className="bg-white rounded-lg px-3 py-2">
+            <div className="text-xs text-slate-500">Total Tagihan</div>
+            <div className="font-bold text-indigo-900">{formatCurrency(sched.housePrice)}</div>
+          </div>
+          <div className="bg-white rounded-lg px-3 py-2">
+            <div className="text-xs text-slate-500">Sudah Dibayar</div>
+            <div className="font-bold text-green-700">{formatCurrency(sched.otherTotal || 0)}</div>
+          </div>
+          {hasKpr ? (
+            <>
+              <div className="bg-white rounded-lg px-3 py-2">
+                <div className="text-xs text-slate-500">Pinjaman KPR</div>
+                <div className="font-bold text-blue-700">
+                  {formatCurrency(sched.kprAmount)}
+                  <span className="text-xs font-normal text-blue-500">
+                    ({sched.kprPct ? sched.kprPct.toFixed(2) : "0"}%)
+                  </span>
+                </div>
+              </div>
+              <div className="bg-white rounded-lg px-3 py-2">
+                <div className="text-xs text-slate-500">Total Pokok KPR</div>
+                <div className="font-bold text-blue-700">{formatCurrency(sched.totalKprPrincipal || sched.kprAmount)}</div>
+              </div>
+              <div className="bg-white rounded-lg px-3 py-2">
+                <div className="text-xs text-slate-500">Total Bunga KPR</div>
+                <div className="font-bold text-blue-700">
+                  {formatCurrency(sched.totalKprInterest || 0)}
+                  <span className="text-xs font-normal text-blue-500">
+                    ({sched.housePrice > 0 ? ((sched.totalKprInterest || 0) / sched.housePrice * 100).toFixed(2) : "0"}%)
+                  </span>
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="col-span-3 bg-amber-50 rounded-lg px-3 py-2 border border-amber-200">
+              <div className="text-xs text-amber-600">Tanpa KPR</div>
+              <div className="font-bold text-amber-800">Cash / Pelunasan bertahap</div>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Non-KPR Table */}
@@ -104,6 +168,11 @@ export default function SchemeDetailPage() {
         </div>
       )}
 
+      {/* KPR Chart — between tables */}
+      {hasKpr && kprSchedule.length > 0 && (
+        <KprChart schedule={kprSchedule} />
+      )}
+
       {/* KPR Table */}
       {kprStages.length > 0 && (
         <div className="bg-white rounded-xl shadow-sm overflow-hidden">
@@ -156,20 +225,6 @@ export default function SchemeDetailPage() {
           </div>
         </div>
       )}
-
-      {/* KPR Chart */}
-      {sched.kprAmount > 0 && sched.kprSchedule && (
-        <KprChart schedule={sched.kprSchedule.map((r: any) => ({ ...r, remaining_balance: r.setelah_pengurangan }))} />
-      )}
-    </div>
-  );
-}
-
-function SummaryCard({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="bg-white rounded-xl shadow-sm p-4">
-      <div className="text-xs text-slate-500 mb-1">{label}</div>
-      <div className="font-semibold text-slate-900 text-sm">{value}</div>
     </div>
   );
 }
