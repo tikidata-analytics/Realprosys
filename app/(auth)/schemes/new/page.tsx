@@ -29,13 +29,19 @@ export default function NewSchemePage() {
 
   const handlePreview = async () => {
     if (!form.customer_id || !form.product_id || !form.payment_plan_id || !form.booking_date) return;
-    const product = products.find((p) => p.id === form.product_id);
-    const plan = paymentPlans.find((p) => p.id === form.payment_plan_id);
-    const customer = customers.find((c) => c.id === form.customer_id);
-    if (!product || !plan) return;
+    setPreview(null);
 
-    const housePrice = Number(product.price);
-    const stages: any[] = plan.stages || [];
+    // Fetch plan directly to ensure fresh data
+    const planRes = await fetch(`/api/payment-plans/${form.payment_plan_id}`);
+    if (!planRes.ok) { alert("Gagal load rencana bayar"); return; }
+    const plan = await planRes.json();
+    const stages = plan.stages || [];
+
+    const product = products.find((p) => p.id === form.product_id);
+    const customer = customers.find((c: any) => c.id === form.customer_id);
+    if (!product) return;
+
+    const housePrice = Number(product.price || 0);
 
     let otherTotal = 0;
     let kprRate = 0;
