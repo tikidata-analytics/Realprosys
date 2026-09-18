@@ -137,6 +137,18 @@ export default function NewSchemePage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.name || !form.customer_id || !form.product_id || !form.payment_plan_id || !form.booking_date) return;
+
+    // Validate: warn on zero-value non-KPR stages
+    const plan = paymentPlans.find((p) => p.id === form.payment_plan_id);
+    if (plan?.stages) {
+      const zeroStages = (plan.stages as any[])
+        .filter(s => s.stage_type !== "KPR" && (s.stage_value == null || Number(s.stage_value) <= 0));
+      if (zeroStages.length > 0) {
+        alert("Tahapan dengan nilai 0 (nol) harus dihapus sebelum disimpan.\n\nHapus baris tersebut di menu Rencana Pembayaran.");
+        return;
+      }
+    }
+
     setLoading(true);
     const res = await fetch("/api/schemes", {
       method: "POST",
@@ -147,7 +159,8 @@ export default function NewSchemePage() {
       const data = await res.json();
       router.push(`/schemes/${data.id}`);
     } else {
-      alert("Gagal membuat skema");
+      const err = await res.json().catch(() => ({}));
+      alert("Gagal membuat skema: " + (err.error || res.statusText));
     }
     setLoading(false);
   };
