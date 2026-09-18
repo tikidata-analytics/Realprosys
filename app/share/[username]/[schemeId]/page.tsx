@@ -2,43 +2,32 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
+import Link from "next/link";
 import KprChart from "@/components/KprChart";
 
 function formatCurrency(val: number) {
   return Number(val || 0).toLocaleString("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 });
 }
 
-export default function SchemeDetailPage() {
-  const { id } = useParams();
-  const [scheme, setScheme] = useState<any>(null);
-  const [shareToken, setShareToken] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
+export default function SharePage() {
+  const { username, schemeId } = useParams();
+  const [data, setData] = useState<any>(null);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!id) return;
-    fetch(`/api/schemes/${id}`)
+    if (!username || !schemeId) return;
+    fetch(`/api/share/${username}/${schemeId}`)
       .then((r) => r.json())
-      .then((data) => { setScheme(data); setShareToken(data.share_token || null); })
-      .catch(console.error);
-  }, [id]);
+      .then((d) => {
+        if (d.error) { setError(d.error); }
+        else { setData(d); }
+        setLoading(false);
+      })
+      .catch(() => { setError("Skema tidak ditemukan"); setLoading(false); });
+  }, [username, schemeId]);
 
-  const toggleShare = async () => {
-    const enabled = !shareToken;
-    const res = await fetch(`/api/schemes/${id}/share`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ enabled }),
-    });
-    const data = await res.json();
-    if (res.ok) setShareToken(enabled ? data.share_token : null);
-  };
-
-  const copyLink = () => {
-    const url = `${window.location.origin}/share/${scheme.username}/${id}`;
-    navigator.clipboard.writeText(url).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); });
-  };
-
-  if (!scheme) {
+  if (loading) {
     return (
       <div className="flex items-center justify-center min-h-64">
         <div className="w-8 h-8 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
@@ -46,12 +35,29 @@ export default function SchemeDetailPage() {
     );
   }
 
-  const s = scheme;
+  if (error) {
+    return (
+      <div className="max-w-2xl mx-auto text-center py-16">
+        <div className="text-6xl mb-4">🔍</div>
+        <h1 className="text-2xl font-bold text-slate-800 mb-2">Skema Tidak Ditemukan</h1>
+        <p className="text-slate-500 mb-6">Skema ini tidak tersedia atau link sudah dinonaktifkan.</p>
+        <Link href="/login" className="px-6 py-3 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700">
+          Buat Skema Saya
+        </Link>
+      </div>
+    );
+  }
+
+  const s = data;
   const sched = s.schedule || {};
   const stages: any[] = sched.stages || [];
   const housePrice = sched.housePrice || 0;
+  const kprAmount = sched.kprAmount || 0;
+  const kprMonthly = sched.kprMonthlyPayment || 0;
+  const kprRate = sched.kprRate || 0;
+  const hasKpr = kprAmount > 0;
 
-  // ── Unified running balance across ALL stages sorted by date ──
+  // Unified running balance
   const allRows: any[] = stages.map((r) => ({ ...r }));
   allRows.sort((a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime());
   let running = housePrice;
@@ -62,64 +68,52 @@ export default function SchemeDetailPage() {
     row._newBalance = running;
   }
 
-  const nonKprStages = allRows.filter((r: any) => !r.is_kpr);
-  const kprStages = allRows.filter((r: any) => r.is_kpr);
+  const nonKprStages = allRows.filter((r) => !r.is_kpr);
+  const kprStages = allRows.filter((r) => r.is_kpr);
 
-  const hasKpr = sched.kprAmount > 0;
-
-  // Reconstruct kprSchedule + computed fields from stored kprStages
+  // KPR schedule for chart
   let kprSchedule: any[] = [];
   if (hasKpr && kprStages.length > 0) {
-    let runningBalance = sched.kprAmount;
+    let rb = kprAmount;
+    const monthlyRate = kprRate > 0 ? kprRate / 100 / 12 : 0;
     for (const row of kprStages) {
-      const principal = Number(row.principal || 0);
-      const interest = Number(row.interest || 0);
-      runningBalance -= principal;
+      const interest = Number(row.interest) || 0;
+      const principal = Number(row.principal) || 0;
+      rb -= principal;
       kprSchedule.push({
         due_date: row.due_date,
-        amount: row.amount,
+        amount: Number(row.amount) || 0,
         principal,
         interest,
-        remaining_balance: Math.max(0, runningBalance),
+        remaining_balance: Math.max(0, rb),
       });
     }
   }
-  const kprPct = sched.housePrice > 0 ? Math.round(sched.kprAmount / sched.housePrice * 10000) / 100 : 0;
-  const totalKprInterest = kprSchedule.reduce((s, r) => s + r.interest, 0);
-  const totalKprPrincipal = kprSchedule.reduce((s, r) => s + r.principal, 0);
-  const bungaPct = sched.housePrice > 0 ? Math.round(totalKprInterest / sched.housePrice * 10000) / 100 : 0;
+
+  const kprPct = housePrice > 0 ? Math.round(kprAmount / housePrice * 10000) / 100 : 0;
+  const totalKprInterest = kprSchedule.reduce((sum: number, r: any) => sum + r.interest, 0);
+  const totalKprPrincipal = kprSchedule.reduce((sum: number, r: any) => sum + r.principal, 0);
+  const bungaPct = housePrice > 0 ? Math.round(totalKprInterest / housePrice * 10000) / 100 : 0;
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <a href="/schemes" className="text-slate-400 hover:text-slate-600">← Skema</a>
-          <h2 className="text-xl font-bold text-slate-900">{s.name}</h2>
+      {/* Header bar */}
+      <div className="bg-indigo-700 text-white py-3 px-6 mb-6 flex items-center justify-between">
+        <div className="flex items-center gap-2 text-sm">
+          <span className="opacity-70">Skema oleh</span>
+          <span className="font-semibold">@{s.username}</span>
         </div>
-        <div className="flex items-center gap-2">
-          {shareToken ? (
-            <>
-              <button onClick={copyLink} className="px-3 py-1.5 bg-green-600 text-white text-xs rounded-lg hover:bg-green-700 font-medium">
-                {copied ? "✓ Tersalin!" : "📋 Copy Link"}
-              </button>
-              <a href={`/share/${s.username}/${id}`} target="_blank" rel="noopener noreferrer" className="px-3 py-1.5 bg-green-100 text-green-700 text-xs rounded-lg hover:bg-green-200">
-                🔗 Buka
-              </a>
-            </>
-          ) : null}
-          <button onClick={toggleShare} className={`px-3 py-1.5 text-xs rounded-lg font-medium ${shareToken ? "bg-red-100 text-red-600 hover:bg-red-200" : "bg-indigo-600 text-white hover:bg-indigo-700"}`}>
-            {shareToken ? "Nonaktifkan Share" : "Aktifkan Share"}
-          </button>
-        </div>
+        <Link href="/register" className="px-4 py-1.5 bg-white text-indigo-700 rounded-lg text-sm font-medium hover:bg-indigo-50 transition">
+          Buat Skema Saya →
+        </Link>
       </div>
 
-      {/* Summary — matches create preview */}
+      {/* Summary */}
       <div className="bg-indigo-50 rounded-xl p-6 space-y-4 mb-6">
         <div className="flex items-center justify-between">
           <h3 className="font-semibold text-indigo-900">{s.name}</h3>
         </div>
 
-        {/* Info header */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
           <div className="bg-white rounded-lg px-3 py-2">
             <div className="text-xs text-slate-500">Pelanggan</div>
@@ -127,7 +121,7 @@ export default function SchemeDetailPage() {
           </div>
           <div className="bg-white rounded-lg px-3 py-2">
             <div className="text-xs text-slate-500">Proyek</div>
-            <div className="font-medium text-slate-800 text-sm truncate">{s.product_name || "-"}</div>
+            <div className="font-medium text-slate-800 text-sm truncate">{s.project_name || "-"}</div>
           </div>
           <div className="bg-white rounded-lg px-3 py-2">
             <div className="text-xs text-slate-500">Produk</div>
@@ -135,28 +129,27 @@ export default function SchemeDetailPage() {
           </div>
           <div className="bg-white rounded-lg px-3 py-2">
             <div className="text-xs text-slate-500">Harga Rumah</div>
-            <div className="font-medium text-slate-800 text-sm">{formatCurrency(sched.housePrice)}</div>
+            <div className="font-medium text-slate-800 text-sm">{formatCurrency(housePrice)}</div>
           </div>
         </div>
 
-        {/* Summary metrics */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3 text-sm">
           <div className="bg-white rounded-lg px-3 py-2">
             <div className="text-xs text-slate-500">Total Tagihan</div>
-            <div className="font-bold text-indigo-900">{formatCurrency(sched.housePrice)}</div>
-            </div>
-            {hasKpr ? (
+            <div className="font-bold text-indigo-900">{formatCurrency(housePrice)}</div>
+          </div>
+          {hasKpr ? (
             <>
               <div className="bg-white rounded-lg px-3 py-2">
                 <div className="text-xs text-slate-500">Pinjaman KPR</div>
                 <div className="font-bold text-blue-700">
-                  {formatCurrency(sched.kprAmount)}
+                  {formatCurrency(kprAmount)}
                   <span className="text-xs font-normal text-blue-500"> ({kprPct}%)</span>
                 </div>
               </div>
               <div className="bg-white rounded-lg px-3 py-2">
                 <div className="text-xs text-slate-500">Cicilan/Bulan</div>
-                <div className="font-bold text-blue-700">{formatCurrency(sched.kprMonthlyPayment || 0)}</div>
+                <div className="font-bold text-blue-700">{formatCurrency(kprMonthly)}</div>
               </div>
               <div className="bg-white rounded-lg px-3 py-2">
                 <div className="text-xs text-slate-500">Total Pokok KPR</div>
@@ -170,7 +163,7 @@ export default function SchemeDetailPage() {
                 </div>
               </div>
             </>
-            ) : (
+          ) : (
             <div className="col-span-3 bg-amber-50 rounded-lg px-3 py-2 border border-amber-200">
               <div className="text-xs text-amber-600">Tanpa KPR</div>
               <div className="font-bold text-amber-800">Cash / Pelunasan bertahap</div>
@@ -232,7 +225,7 @@ export default function SchemeDetailPage() {
         </div>
       )}
 
-      {/* KPR Chart — between tables */}
+      {/* KPR Chart */}
       {hasKpr && kprSchedule.length > 0 && (
         <KprChart schedule={kprSchedule} />
       )}
@@ -289,6 +282,14 @@ export default function SchemeDetailPage() {
           </div>
         </div>
       )}
+
+      {/* CTA footer */}
+      <div className="mt-8 text-center bg-slate-50 rounded-xl p-6">
+        <p className="text-slate-600 mb-3">Ingin buat skema seperti ini untuk bisnis Anda?</p>
+        <Link href="/register" className="px-6 py-3 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 transition">
+          Buat Skema Saya →
+        </Link>
+      </div>
     </div>
   );
 }
