@@ -44,7 +44,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       }
 
       if (name != null) {
-        await client.query("UPDATE payment_plans SET name=$1 WHERE id=$2", [name, id]);
+        await client.query("UPDATE payment_plans SET name=$1 WHERE id=$2 AND user_id=$3", [name, id, userId]);
       }
 
       if (stages != null) {
@@ -68,7 +68,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       }
 
       await client.query("COMMIT");
-      const updated = await pool.query("SELECT id, user_id, name, created_at FROM payment_plans WHERE id=$1", [id]);
+      const updated = await pool.query("SELECT id, user_id, name, created_at FROM payment_plans WHERE id=$1 AND user_id=$2", [id, userId]);
       const updatedStages = await pool.query("SELECT * FROM payment_stages WHERE payment_plan_id=$1 ORDER BY stage_order", [id]);
       return NextResponse.json({ ...updated.rows[0], stages: updatedStages.rows });
     } catch (err) {
