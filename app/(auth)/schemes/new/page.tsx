@@ -97,23 +97,31 @@ export default function NewSchemePage() {
         });
       }
     } else if (kprAmount > 0 && kprTenor > 0) {
-      kprMonthly = kprAmount / (kprTenor * 12);
+      // No interest rate — force annuity with minimal rate to use correct formula
+      const fakeRate = 0.01;
+      const mr = fakeRate / 100 / 12;
+      const np = kprTenor * 12;
+      kprMonthly = (kprAmount * (mr * Math.pow(1 + mr, np))) / (Math.pow(1 + mr, np) - 1);
       const kprStartDate = new Date(form.booking_date);
       let runningBalance = kprAmount;
-      for (let i = 1; i <= kprTenor * 12; i++) {
+      for (let i = 1; i <= np; i++) {
         const dueDate = new Date(kprStartDate);
         dueDate.setMonth(dueDate.getMonth() + i);
-        const principalPayment = kprMonthly;
+        const interestPayment = runningBalance * mr;
+        const principalPayment = kprMonthly - interestPayment;
         runningBalance -= principalPayment;
         kprSchedule.push({
           due_date: dueDate.toISOString().split("T")[0],
           amount: Math.round(kprMonthly * 100) / 100,
           principal: Math.round(principalPayment * 100) / 100,
-          interest: 0,
+          interest: Math.round(interestPayment * 100) / 100,
           remaining_balance: Math.max(0, Math.round(runningBalance * 100) / 100),
         });
       }
     }
+
+    const totalKprPrincipal = kprSchedule.reduce((sum, r) => sum + r.principal, 0);
+    const totalKprInterest = kprSchedule.reduce((sum, r) => sum + r.interest, 0);
 
     // Build dp counters for labeling
     const dpCounters: Record<number, string> = {};
@@ -132,11 +140,14 @@ export default function NewSchemePage() {
       projectName: product?.project_name || "-",
       stages: previewStages,
       kprAmount,
+      kprPct: housePrice > 0 ? Math.round(kprAmount / housePrice * 100 * 100) / 100 : 0,
       kprMonthly,
       kprTenor,
       kprRate,
       kprSchedule,
       otherTotal,
+      totalKprPrincipal,
+      totalKprInterest,
       dpCounters,
     });
   };
@@ -264,28 +275,32 @@ export default function NewSchemePage() {
             </div>
 
             {/* Summary */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-3 text-sm">
               <div className="bg-white rounded-lg px-3 py-2">
                 <div className="text-xs text-slate-500">Total Tagihan</div>
                 <div className="font-bold text-indigo-900">{formatCurrency(preview.housePrice)}</div>
               </div>
               <div className="bg-white rounded-lg px-3 py-2">
                 <div className="text-xs text-slate-500">Sudah Dibayar</div>
-                <div className="font-bold text-green-700">{formatCurrency(preview.otherTotal + preview.kprAmount)}</div>
+                <div className="font-bold text-green-700">{formatCurrency(preview.otherTotal)}</div>
               </div>
               {preview.kprAmount > 0 ? (
                 <>
                   <div className="bg-white rounded-lg px-3 py-2">
                     <div className="text-xs text-slate-500">Pinjaman KPR</div>
-                    <div className="font-bold text-blue-700">{formatCurrency(preview.kprAmount)}</div>
+                    <div className="font-bold text-blue-700">{formatCurrency(preview.kprAmount)} <span className="text-xs font-normal text-blue-500">({preview.kprPct}%)</span></div>
                   </div>
                   <div className="bg-white rounded-lg px-3 py-2">
-                    <div className="text-xs text-slate-500">Cicilan/Bulan</div>
-                    <div className="font-bold text-blue-700">{formatCurrency(preview.kprMonthly)}</div>
+                    <div className="text-xs text-slate-500">Total Pokok KPR</div>
+                    <div className="font-bold text-blue-700">{formatCurrency(preview.totalKprPrincipal)}</div>
+                  </div>
+                  <div className="bg-white rounded-lg px-3 py-2">
+                    <div className="text-xs text-slate-500">Total Bunga KPR</div>
+                    <div className="font-bold text-blue-700">{formatCurrency(preview.totalKprInterest)}</div>
                   </div>
                 </>
               ) : (
-                <div className="col-span-2 bg-amber-50 rounded-lg px-3 py-2 border border-amber-200">
+                <div className="col-span-3 bg-amber-50 rounded-lg px-3 py-2 border border-amber-200">
                   <div className="text-xs text-amber-600">Tanpa KPR</div>
                   <div className="font-bold text-amber-800">Cash / Pelunasan bertahap</div>
                 </div>
