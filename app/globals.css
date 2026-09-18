@@ -12,12 +12,14 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* Print / PDF export */
+@media print {
+  nav, header, footer, .no-print { display: none !important; }
+  body { background: white !important; }
+  .print-only { display: block !important; }
 }
+
+.print-only { display: none; }
 
 body {
   background: var(--background);
