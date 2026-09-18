@@ -79,7 +79,7 @@ export default function KprChart({ schedule }: KprChartProps) {
         <span className="text-xs font-medium text-blue-700">Grafik KPR</span>
       </div>
       <div className="bg-slate-50 p-2" style={{ overflowX: "auto" }}>
-        <svg viewBox={`0 0 ${W} ${H}`} width="100%" height={H} style={{ minWidth: `${W}px` }}>
+        <svg viewBox={`0 0 ${W} ${H}`} width="100%" height={H} style={{ minWidth: `${W}px` }} className="max-w-full sm:min-w-0">
           {/* Grid */}
           {yLabels.map(({ y, val }) => (
             <g key={val}>
