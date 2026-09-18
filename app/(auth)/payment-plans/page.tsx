@@ -82,6 +82,14 @@ export default function PaymentPlansPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.name.trim()) return;
+
+    // Validate: zero-value non-KPR stages
+    const zeroStages = stages.filter(s => s.stage_type !== "KPR" && (s.stage_value == null || Number(s.stage_value) <= 0));
+    if (zeroStages.length > 0) {
+      alert("Tahapan dengan nilai 0 (nol) harus dihapus. Klik ✕ pada baris tersebut untuk menghapusnya.");
+      return;
+    }
+
     setLoading(true);
 
     const payload = {
