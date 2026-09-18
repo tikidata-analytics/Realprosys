@@ -7,13 +7,16 @@ interface Customer {
   name: string;
   email: string | null;
   phone: string | null;
+  birth_date: string | null;
+  gender: string | null;
   created_at: string;
 }
 
 export default function CustomersPage() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ name: "", email: "", phone: "" });
+  const [editId, setEditId] = useState<string | null>(null);
+  const [form, setForm] = useState({ name: "", email: "", phone: "", birth_date: "", gender: "" });
   const [loading, setLoading] = useState(false);
 
   useEffect(() => { fetchCustomers(); }, []);
@@ -24,17 +27,28 @@ export default function CustomersPage() {
     setCustomers(data);
   };
 
+  const openEdit = (c: Customer) => {
+    setEditId(c.id);
+    setForm({ name: c.name, email: c.email || "", phone: c.phone || "", birth_date: c.birth_date || "", gender: c.gender || "" });
+    setShowForm(true);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    await fetch("/api/customers", {
-      method: "POST",
+    const url = editId ? `/api/customers/${editId}` : "/api/customers";
+    const method = editId ? "PUT" : "POST";
+    const res = await fetch(url, {
+      method,
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(form),
     });
-    setForm({ name: "", email: "", phone: "" });
-    setShowForm(false);
-    fetchCustomers();
+    if (res.ok) {
+      setForm({ name: "", email: "", phone: "", birth_date: "", gender: "" });
+      setShowForm(false);
+      setEditId(null);
+      fetchCustomers();
+    }
     setLoading(false);
   };
 
@@ -44,30 +58,55 @@ export default function CustomersPage() {
     fetchCustomers();
   };
 
+  const cancelForm = () => {
+    setForm({ name: "", email: "", phone: "", birth_date: "", gender: "" });
+    setShowForm(false);
+    setEditId(null);
+  };
+
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-xl font-bold text-slate-900">Pelanggan</h2>
-        <button onClick={() => setShowForm(!showForm)}
+        <button onClick={() => { setEditId(null); setShowForm(!showForm); }}
           className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition">
-          {showForm ? "Batal" : "+ Tambah"}
+          {showForm && !editId ? "Batal" : "+ Tambah"}
         </button>
       </div>
 
       {showForm && (
         <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-sm p-6 mb-6 space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <input type="text" placeholder="Nama" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required
               className="px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
             <input type="email" placeholder="Email (opsional)" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })}
               className="px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
-            <input type="text" placeholder="Telepon (opsional)" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })}
+            <input type="text" placeholder="Telepon" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })}
+              className="px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
+            <input type="date" placeholder="Tanggal Lahir" value={form.birth_date} onChange={(e) => setForm({ ...form, birth_date: e.target.value })} required
               className="px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
           </div>
-          <button type="submit" disabled={loading}
-            className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition disabled:opacity-50">
-            {loading ? "Menyimpan..." : "Simpan"}
-          </button>
+          <div className="flex items-center gap-4">
+            <label className="text-sm font-medium text-slate-700">Gender:</label>
+            <label className="flex items-center gap-1">
+              <input type="radio" name="gender" value="LAKI" checked={form.gender === "LAKI"} onChange={(e) => setForm({ ...form, gender: e.target.value })} required />
+              Laki-laki
+            </label>
+            <label className="flex items-center gap-1">
+              <input type="radio" name="gender" value="PEREMPUAN" checked={form.gender === "PEREMPUAN"} onChange={(e) => setForm({ ...form, gender: e.target.value })} />
+              Perempuan
+            </label>
+          </div>
+          <div className="flex gap-2">
+            <button type="submit" disabled={loading}
+              className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition disabled:opacity-50">
+              {loading ? "Menyimpan..." : "Simpan"}
+            </button>
+            <button type="button" onClick={cancelForm}
+              className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-200 transition">
+              Batal
+            </button>
+          </div>
         </form>
       )}
 
@@ -79,8 +118,9 @@ export default function CustomersPage() {
             <thead className="bg-slate-50 border-b border-slate-200">
               <tr>
                 <th className="text-left px-4 py-3 font-medium text-slate-600">Nama</th>
-                <th className="text-left px-4 py-3 font-medium text-slate-600">Email</th>
+                <th className="text-left px-4 py-3 font-medium text-slate-600">Gender</th>
                 <th className="text-left px-4 py-3 font-medium text-slate-600">Telepon</th>
+                <th className="text-left px-4 py-3 font-medium text-slate-600">Tanggal Lahir</th>
                 <th className="text-right px-4 py-3 font-medium text-slate-600">Aksi</th>
               </tr>
             </thead>
@@ -88,9 +128,12 @@ export default function CustomersPage() {
               {customers.map((c) => (
                 <tr key={c.id} className="hover:bg-slate-50">
                   <td className="px-4 py-3 font-medium text-slate-900">{c.name}</td>
-                  <td className="px-4 py-3 text-slate-500">{c.email || "-"}</td>
+                  <td className="px-4 py-3 text-slate-500">{c.gender === "LAKI" ? "Laki-laki" : c.gender === "PEREMPUAN" ? "Perempuan" : "-"}</td>
                   <td className="px-4 py-3 text-slate-500">{c.phone || "-"}</td>
+                  <td className="px-4 py-3 text-slate-500">{c.birth_date || "-"}</td>
                   <td className="px-4 py-3 text-right">
+                    <button onClick={() => openEdit(c)}
+                      className="px-3 py-1 text-xs text-indigo-600 hover:bg-indigo-50 rounded-lg mr-1">Edit</button>
                     <button onClick={() => handleDelete(c.id)}
                       className="px-3 py-1 text-xs text-red-600 hover:bg-red-50 rounded-lg">Hapus</button>
                   </td>

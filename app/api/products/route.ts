@@ -20,15 +20,16 @@ export async function POST(req: NextRequest) {
   const userId = req.headers.get("x-user-id");
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   try {
-    const { name, type, price, project_id } = await req.json();
-    if (!name || !type || !price) return NextResponse.json({ error: "Name, type, price required" }, { status: 400 });
+    const { name, type, price, project_id, land_area, building_area, bedrooms, bathrooms } = await req.json();
+    if (!name || !type || !price || !project_id) return NextResponse.json({ error: "Name, type, price, project_id wajib diisi" }, { status: 400 });
+    if (!land_area || !building_area || !bedrooms || !bathrooms) return NextResponse.json({ error: "Luas tanah, luas bangunan, kamar tidur, kamar mandi wajib diisi" }, { status: 400 });
 
     const id = generateId();
     await pool.query(
-      "INSERT INTO products (id, user_id, name, type, price, project_id) VALUES ($1,$2,$3,$4,$5,$6)",
-      [id, userId, name, type, price, project_id || null]
+      "INSERT INTO products (id, user_id, name, type, price, project_id, land_area, building_area, bedrooms, bathrooms) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)",
+      [id, userId, name, type, price, project_id, land_area, building_area, bedrooms, bathrooms]
     );
-    return NextResponse.json({ id, user_id: userId, name, type, price, project_id: project_id || null }, { status: 201 });
+    return NextResponse.json({ id, user_id: userId, name, type, price, project_id, land_area, building_area, bedrooms, bathrooms }, { status: 201 });
   } catch {
     return NextResponse.json({ error: "Failed" }, { status: 500 });
   }

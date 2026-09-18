@@ -20,10 +20,10 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const { id } = await params;
   try {
-    const { name, type, price, project_id } = await req.json();
+    const { name, type, price, project_id, land_area, building_area, bedrooms, bathrooms } = await req.json();
     const result = await pool.query(
-      "UPDATE products SET name=COALESCE($1,name), type=COALESCE($2,type), price=COALESCE($3,price), project_id=COALESCE($4,project_id) WHERE id=$5 AND user_id=$6 RETURNING *",
-      [name, type, price, project_id, id, userId]
+      "UPDATE products SET name=COALESCE($1,name), type=COALESCE($2,type), price=COALESCE($3,price), project_id=COALESCE($4,project_id), land_area=COALESCE($5,land_area), building_area=COALESCE($6,building_area), bedrooms=COALESCE($7,bedrooms), bathrooms=COALESCE($8,bathrooms) WHERE id=$9 AND user_id=$10 RETURNING *",
+      [name, type, price, project_id, land_area, building_area, bedrooms, bathrooms, id, userId]
     );
     if (result.rows.length === 0) return NextResponse.json({ error: "Not found" }, { status: 404 });
     return NextResponse.json(result.rows[0]);

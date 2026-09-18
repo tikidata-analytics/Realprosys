@@ -22,15 +22,16 @@ export async function POST(req: NextRequest) {
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   try {
-    const { name, email, phone } = await req.json();
+    const { name, email, phone, birth_date, gender } = await req.json();
     if (!name) return NextResponse.json({ error: "Name required" }, { status: 400 });
+    if (!birth_date || !gender) return NextResponse.json({ error: "Tanggal lahir dan gender wajib diisi" }, { status: 400 });
 
     const id = generateId();
     await pool.query(
-      "INSERT INTO customers (id, user_id, name, email, phone) VALUES ($1,$2,$3,$4,$5)",
-      [id, userId, name, email || null, phone || null]
+      "INSERT INTO customers (id, user_id, name, email, phone, birth_date, gender) VALUES ($1,$2,$3,$4,$5,$6,$7)",
+      [id, userId, name, email || null, phone || null, birth_date, gender]
     );
-    return NextResponse.json({ id, user_id: userId, name, email, phone }, { status: 201 });
+    return NextResponse.json({ id, user_id: userId, name, email, phone, birth_date, gender }, { status: 201 });
   } catch {
     return NextResponse.json({ error: "Failed" }, { status: 500 });
   }

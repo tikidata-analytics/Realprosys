@@ -24,10 +24,10 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
   const { id } = await params;
   try {
-    const { name, email, phone } = await req.json();
+    const { name, email, phone, birth_date, gender } = await req.json();
     const result = await pool.query(
-      "UPDATE customers SET name=COALESCE($1,name), email=COALESCE($2,email), phone=COALESCE($3,phone) WHERE id=$4 AND user_id=$5 RETURNING *",
-      [name, email, phone, id, userId]
+      "UPDATE customers SET name=COALESCE($1,name), email=COALESCE($2,email), phone=COALESCE($3,phone), birth_date=COALESCE($4,birth_date), gender=COALESCE($5,gender) WHERE id=$6 AND user_id=$7 RETURNING *",
+      [name, email, phone, birth_date, gender, id, userId]
     );
     if (result.rows.length === 0) return NextResponse.json({ error: "Not found" }, { status: 404 });
     return NextResponse.json(result.rows[0]);
