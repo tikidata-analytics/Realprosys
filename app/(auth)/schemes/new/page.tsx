@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { formatCurrency, formatDate } from "@/lib/formatters";
 import DatePicker from "@/components/DatePicker";
+import KprChart from "@/components/KprChart";
 
 export default function NewSchemePage() {
   const router = useRouter();
@@ -295,8 +296,8 @@ export default function NewSchemePage() {
                     <div className="font-bold text-blue-700">{formatCurrency(preview.totalKprPrincipal)}</div>
                   </div>
                   <div className="bg-white rounded-lg px-3 py-2">
-                    <div className="text-xs text-slate-500">Total Bunga KPR</div>
-                    <div className="font-bold text-blue-700">{formatCurrency(preview.totalKprInterest)}</div>
+                  <div className="text-xs text-slate-500">Total Bunga KPR</div>
+                  <div className="font-bold text-blue-700">{formatCurrency(preview.totalKprInterest)} <span className="text-xs font-normal text-blue-500">({preview.housePrice > 0 ? Math.round(preview.totalKprInterest / preview.housePrice * 100 * 100) / 100 : 0}%)</span></div>
                   </div>
                 </>
               ) : (
@@ -353,7 +354,9 @@ export default function NewSchemePage() {
 
             {/* KPR schedule summary */}
             {preview.kprAmount > 0 && (
-              <div className="border border-blue-200 rounded-lg overflow-hidden">
+              <div>
+                <KprChart schedule={preview.kprSchedule} />
+                <div className="border border-blue-200 rounded-lg overflow-hidden">
                 <div className="bg-blue-50 px-3 py-2 border-b border-blue-200">
                   <span className="text-xs font-medium text-blue-700">Jadwal KPR — {preview.kprTenor} tahun × {formatCurrency(preview.kprMonthly)}/bulan</span>
                 </div>
@@ -393,6 +396,7 @@ export default function NewSchemePage() {
                     </tfoot>
                   )}
                 </table>
+                </div>
               </div>
             )}
           </div>
