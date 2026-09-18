@@ -18,7 +18,7 @@ const AMOUNT_TYPES = [
 const PAGE_SIZE = 10;
 
 function emptyStage() {
-  return { stage_type: "DOWN_PAYMENT", amount_type: "PERCENTAGE", stage_value: "", interval_months: 0 };
+  return { stage_type: "DOWN_PAYMENT", amount_type: "PERCENTAGE", stage_value: "", interval_months: 0, count: 1 };
 }
 
 export default function PaymentPlansPage() {
@@ -28,8 +28,8 @@ export default function PaymentPlansPage() {
   const [stages, setStages] = useState<any[]>([{ ...emptyStage(), stage_value: "20" }]);
   const [loading, setLoading] = useState(false);
   const [sort, setSort] = useState("created_at:desc");
-  const [page, setPage] = useState(1);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
 
   useEffect(() => { fetchPlans(); }, []);
 
@@ -92,9 +92,23 @@ export default function PaymentPlansPage() {
 
     setLoading(true);
 
+    // Expand stages by count
+    const expandedStages: any[] = [];
+    for (const s of stages) {
+      const count = Math.max(1, parseInt(String(s.count)) || 1);
+      for (let c = 0; c < count; c++) {
+        expandedStages.push({
+          stage_type: s.stage_type,
+          amount_type: s.amount_type,
+          stage_value: s.stage_value,
+          interval_months: c === 0 ? s.interval_months : s.interval_months,
+        });
+      }
+    }
+
     const payload = {
       name: form.name,
-      stages: stages.map((s, i) => ({
+      stages: expandedStages.map((s, i) => ({
         stage_type: s.stage_type,
         stage_order: i,
         amount_type: s.stage_type === "KPR" ? "PERCENTAGE" : s.amount_type,
@@ -133,6 +147,7 @@ export default function PaymentPlansPage() {
         amount_type: s.amount_type,
         stage_value: s.stage_value != null ? String(s.stage_value) : "",
         interval_months: s.interval_months || 0,
+        count: 1,
       }))
     );
     setShowForm(true);
@@ -212,6 +227,17 @@ export default function PaymentPlansPage() {
                       onChange={(e) => updateStage(idx, "stage_value", e.target.value)}
                       placeholder={stage.amount_type === "PERCENTAGE" ? "%" : "Rp"}
                       className="w-28 px-2 py-1.5 border border-slate-300 rounded-lg text-sm focus:ring-1 focus:ring-indigo-500 focus:outline-none" />
+
+                    {/* Count (for non-KPR, non-BOOKING_FEE) */}
+                    {stage.stage_type !== "KPR" && (
+                      <>
+                        <span className="text-xs text-slate-400 px-1">×</span>
+                        <input type="number" value={stage.count || 1}
+                          onChange={(e) => updateStage(idx, "count", Math.max(1, parseInt(e.target.value) || 1))}
+                          min="1"
+                          className="w-16 px-2 py-1.5 border border-slate-300 rounded-lg text-sm focus:ring-1 focus:ring-indigo-500 focus:outline-none" />
+                      </>
+                    )}
                   </>
                 ) : (
                   <>
