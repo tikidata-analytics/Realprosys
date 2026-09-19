@@ -18,7 +18,7 @@ const AMOUNT_TYPES = [
 const PAGE_SIZE = 10;
 
 function emptyStage() {
-  return { stage_type: "DOWN_PAYMENT", amount_type: "PERCENTAGE", stage_value: "", interval_months: 0, count: 1 };
+  return { stage_type: "DOWN_PAYMENT", amount_type: "PERCENTAGE", stage_value: "", interval_months: 0, count: 1, reduces_dp: false };
 }
 
 export default function PaymentPlansPage() {
@@ -105,6 +105,7 @@ export default function PaymentPlansPage() {
           amount_type: s.amount_type,
           stage_value: splitVal,
           interval_months: c === 0 ? s.interval_months : s.interval_months,
+          reduces_dp: s.stage_type === "BOOKING_FEE" ? !!s.reduces_dp : false,
         });
       }
     }
@@ -117,6 +118,7 @@ export default function PaymentPlansPage() {
         amount_type: s.stage_type === "KPR" ? "PERCENTAGE" : s.amount_type,
         stage_value: s.stage_type === "KPR" ? parseFloat(s.stage_value) || 8.5 : (parseFloat(s.stage_value) || 0),
         interval_months: s.stage_type === "KPR" ? parseInt(s.interval_months) || 20 : (parseInt(s.interval_months) || 0),
+        reduces_dp: s.stage_type === "BOOKING_FEE" ? !!s.reduces_dp : false,
       })),
     };
 
@@ -151,6 +153,7 @@ export default function PaymentPlansPage() {
         stage_value: s.stage_value != null ? String(s.stage_value) : "",
         interval_months: s.interval_months || 0,
         count: 1,
+        reduces_dp: s.stage_type === "BOOKING_FEE" ? !!s.reduces_dp : false,
       }))
     );
     setShowForm(true);
@@ -213,6 +216,16 @@ export default function PaymentPlansPage() {
                     <option key={t.value} value={t.value}>{t.label}</option>
                   ))}
                 </select>
+
+                {/* Reduces DP checkbox — only for Booking Fee */}
+                {stage.stage_type === "BOOKING_FEE" && (
+                  <label className="flex items-center gap-1.5 cursor-pointer select-none">
+                    <input type="checkbox" checked={!!stage.reduces_dp}
+                      onChange={(e) => updateStage(idx, "reduces_dp", e.target.checked)}
+                      className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
+                    <span className="text-xs text-slate-600 whitespace-nowrap">mengurangi DP</span>
+                  </label>
+                )}
 
                 {/* Amount type */}
                 {stage.stage_type !== "KPR" ? (

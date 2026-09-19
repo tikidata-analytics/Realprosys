@@ -81,7 +81,13 @@ export async function POST(req: NextRequest) {
         amount = value;
       }
 
-      otherStagesTotal += amount;
+      // Booking Fee with reduces_dp=true: reduces the effective house price for DP calculation
+      // It does NOT count toward otherStagesTotal (which affects KPR)
+      const reducesDp = !!stage.reduces_dp;
+
+      if (!reducesDp) {
+        otherStagesTotal += amount;
+      }
 
       // Advance date by interval
       if (intervalMonths > 0) {
@@ -97,6 +103,7 @@ export async function POST(req: NextRequest) {
 
       scheduleRows.push({
         stage_type: stageType,
+        reduces_dp: reducesDp,
         due_date: currentDate.toISOString().split("T")[0],
         amount: Math.round(amount * 100) / 100,
         sebelum_pengurangan: sebelum,
@@ -105,7 +112,7 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // KPR = remaining after all non-KPR stages
+    // KPR = remaining after all non-KPR stages (BF with reduces_dp already excluded from otherStagesTotal)
     kprAmount = Math.max(0, housePrice - otherStagesTotal);
 
     // ─── Build KPR schedule ───

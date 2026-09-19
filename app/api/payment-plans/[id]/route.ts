@@ -14,7 +14,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     if (plan.rows.length === 0) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
     const stages = await pool.query(
-      `SELECT id, payment_plan_id, stage_type, stage_order, amount_type, stage_value, interval_months, created_at
+      `SELECT id, payment_plan_id, stage_type, stage_order, amount_type, stage_value, interval_months, reduces_dp, created_at
        FROM payment_stages WHERE payment_plan_id=$1 ORDER BY stage_order`,
       [id]
     );
@@ -53,8 +53,8 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
           if (!stage.stage_type || stage.amount_type == null) continue;
           const stageId = generateId();
           await client.query(
-            `INSERT INTO payment_stages (id, payment_plan_id, stage_type, stage_order, amount_type, stage_value, interval_months)
-             VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+            `INSERT INTO payment_stages (id, payment_plan_id, stage_type, stage_order, amount_type, stage_value, interval_months, reduces_dp)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
             [
               stageId, id,
               stage.stage_type,
@@ -62,6 +62,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
               stage.amount_type,
               stage.stage_value ?? null,
               stage.interval_months ?? 0,
+              stage.stage_type === "BOOKING_FEE" ? !!stage.reduces_dp : false,
             ]
           );
         }
