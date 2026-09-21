@@ -26,7 +26,7 @@ export default function LoginPage() {
       if (!res.ok) {
         setError(data.error || "Login gagal");
       } else {
-        setTimeout(() => { window.location.href = "/dashboard"; }, 100);
+        window.location.href = "/dashboard";
       }
     } catch {
       setError("Koneksi gagal. Coba lagi.");
