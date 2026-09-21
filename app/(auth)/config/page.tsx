@@ -325,10 +325,141 @@ function UserManagementSection() {
   );
 }
 
+// ─── Tier History section ─────────────────────────────────────
+
+interface HistoryRow {
+  id: string;
+  user_id: string;
+  user_email: string;
+  user_username: string;
+  from_tier: string | null;
+  to_tier: string | null;
+  from_role: string | null;
+  to_role: string | null;
+  changed_by: string;
+  changed_by_email: string;
+  changed_at: string;
+}
+
+function TierHistorySection() {
+  const [rows, setRows] = useState<HistoryRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [userQ, setUserQ] = useState("");
+  const [action, setAction] = useState("");
+  const [debouncedQ, setDebouncedQ] = useState("");
+
+  // Debounce search input
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedQ(userQ), 350);
+    return () => clearTimeout(t);
+  }, [userQ]);
+
+  useEffect(() => {
+    setLoading(true);
+    const params = new URLSearchParams();
+    if (debouncedQ) params.set("user_q", debouncedQ);
+    if (action) params.set("action", action);
+    fetch(`/api/config/tier-history?${params}`)
+      .then((r) => r.json())
+      .then((d) => { setRows(d); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, [debouncedQ, action]);
+
+  const changeLabel = (row: HistoryRow) => {
+    const parts: string[] = [];
+    if (row.from_tier && row.to_tier && row.from_tier !== row.to_tier) {
+      parts.push(`${row.from_tier} → ${row.to_tier}`);
+    }
+    if (row.from_role && row.to_role && row.from_role !== row.to_role) {
+      parts.push(`role: ${row.from_role} → ${row.to_role}`);
+    }
+    return parts.join(", ") || "—";
+  };
+
+  const isUpgrade = (row: HistoryRow) =>
+    row.from_tier === "free" && row.to_tier === "premium";
+  const isDowngrade = (row: HistoryRow) =>
+    row.from_tier === "premium" && row.to_tier === "free";
+
+  const fmt = (iso: string) =>
+    new Date(iso).toLocaleString("id-ID", {
+      day: "2-digit", month: "short", year: "numeric",
+      hour: "2-digit", minute: "2-digit",
+    });
+
+  return (
+    <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+      <div className="px-4 py-3 border-b border-slate-200">
+        <p className="text-sm text-slate-500">
+          Riwayat perubahan tier dan role setiap user. Hanya webmaster yang bisa melihat.
+        </p>
+      </div>
+
+      {/* Filters */}
+      <div className="px-4 py-3 border-b border-slate-100 flex flex-wrap gap-3">
+        <input
+          type="text"
+          placeholder="Filter by user email..."
+          value={userQ}
+          onChange={(e) => setUserQ(e.target.value)}
+          className="flex-1 min-w-48 px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+        />
+        <select
+          value={action}
+          onChange={(e) => setAction(e.target.value)}
+          className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+        >
+          <option value="">Semua</option>
+          <option value="upgrade">Upgrade</option>
+          <option value="downgrade">Downgrade</option>
+        </select>
+      </div>
+
+      {loading ? (
+        <div className="p-8 text-center text-slate-400">Memuat...</div>
+      ) : rows.length === 0 ? (
+        <div className="p-8 text-center text-sm text-slate-400">Belum ada riwayat perubahan.</div>
+      ) : (
+        <table className="w-full text-sm">
+          <thead className="bg-slate-50 border-b border-slate-200">
+            <tr>
+              <th className="text-left px-4 py-3 font-medium text-slate-600">User</th>
+              <th className="text-left px-4 py-3 font-medium text-slate-600">Perubahan</th>
+              <th className="text-left px-4 py-3 font-medium text-slate-600">Oleh</th>
+              <th className="text-left px-4 py-3 font-medium text-slate-600">Waktu</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100">
+            {rows.map((row) => (
+              <tr key={row.id} className="hover:bg-slate-50">
+                <td className="px-4 py-3">
+                  <div className="text-sm font-medium text-slate-800">{row.user_email}</div>
+                  <div className="text-xs text-slate-400">@{row.user_username}</div>
+                </td>
+                <td className="px-4 py-3">
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                    isUpgrade(row) ? "bg-green-100 text-green-700"
+                    : isDowngrade(row) ? "bg-red-100 text-red-700"
+                    : "bg-slate-100 text-slate-600"
+                  }`}>
+                    {changeLabel(row)}
+                  </span>
+                </td>
+                <td className="px-4 py-3 text-slate-600 text-xs">{row.changed_by_email}</td>
+                <td className="px-4 py-3 text-slate-500 text-xs">{fmt(row.changed_at)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </div>
+  );
+}
+
 // ─── Main page ────────────────────────────────────────────────
 
 export default function ConfigPage() {
-  const [activeTab, setActiveTab] = useState<"limits" | "users">("limits");
+  const [activeTab, setActiveTab] = useState<"limits" | "users" | "history">("limits");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -383,9 +514,19 @@ export default function ConfigPage() {
         >
           Manajemen User
         </button>
+        <button
+          onClick={() => setActiveTab("history")}
+          className={`px-4 py-2 text-sm font-medium border-b-2 transition ${
+            activeTab === "history"
+              ? "border-indigo-600 text-indigo-600"
+              : "border-transparent text-slate-500 hover:text-slate-700"
+          }`}
+        >
+          Riwayat Tier
+        </button>
       </div>
 
-      {activeTab === "limits" ? <LimitsSection /> : <UserManagementSection />}
+      {activeTab === "limits" ? <LimitsSection /> : activeTab === "users" ? <UserManagementSection /> : <TierHistorySection />}
     </div>
   );
 }

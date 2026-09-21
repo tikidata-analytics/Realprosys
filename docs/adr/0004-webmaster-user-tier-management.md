@@ -1,7 +1,7 @@
 # ADR-0004: Webmaster-Managed User Tier Changes
 
 **Date**: 2026-09-21
-**Status**: Accepted
+**Status**: **Superseded by ADR-0005**
 **Deciders**: Tikidata Analytics / Hermes Agent
 
 ## Context
