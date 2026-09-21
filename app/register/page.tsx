@@ -28,7 +28,7 @@ export default function RegisterPage() {
       if (!res.ok) {
         setError(data.error || "Registrasi gagal");
       } else {
-        window.location.href = "/dashboard";
+        setTimeout(() => { window.location.href = "/dashboard"; }, 100);
       }
     } catch {
       setError("Koneksi gagal. Coba lagi.");
