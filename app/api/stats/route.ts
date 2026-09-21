@@ -1,8 +1,9 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import pool from "@/lib/db";
+import { getUserIdFromRequest } from "@/lib/auth-api";
 
-export async function GET(req: Request) {
-  const userId = req.headers.get("x-user-id");
+export async function GET(req: NextRequest) {
+  const userId = await getUserIdFromRequest(req);
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   try {

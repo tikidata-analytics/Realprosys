@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isWebmaster } from "@/lib/users";
+import { getUserIdFromRequest } from "@/lib/auth-api";
+
 
 export async function GET(req: NextRequest) {
   // Webmaster guard — must have role=webmaster
-  const userId = req.headers.get("x-user-id");
+  const userId = await getUserIdFromRequest(req);
   if (!userId || !(await isWebmaster(userId))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
@@ -17,7 +19,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function PUT(req: NextRequest) {
-  const userId = req.headers.get("x-user-id");
+  const userId = await getUserIdFromRequest(req);
   if (!userId || !(await isWebmaster(userId))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }

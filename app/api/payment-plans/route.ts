@@ -2,9 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import pool from "@/lib/db";
 import { generateId } from "@/lib/auth";
 import { checkLimit, limitResponse } from "@/lib/limits";
+import { getUserIdFromRequest } from "@/lib/auth-api";
+
 
 export async function GET(req: NextRequest) {
-  const userId = req.headers.get("x-user-id");
+  const userId = await getUserIdFromRequest(req);
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   try {
     const plans = await pool.query(
@@ -34,7 +36,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const userId = req.headers.get("x-user-id");
+  const userId = await getUserIdFromRequest(req);
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const limit = await checkLimit(userId, "payment_plans");

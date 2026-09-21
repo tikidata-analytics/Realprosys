@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import pool from "@/lib/db";
+import { getUserIdFromRequest } from "@/lib/auth-api";
 
 const SESSION_COOKIE = "realprosys_session";
 
 export async function POST(req: NextRequest) {
-  const userId = req.headers.get("x-user-id");
+  const userId = await getUserIdFromRequest(req);
   if (userId) {
     // Revoke all tokens by incrementing token_version
     await pool.query(

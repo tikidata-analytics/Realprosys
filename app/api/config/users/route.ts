@@ -2,10 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import pool from "@/lib/db";
 import { isWebmaster } from "@/lib/users";
 import { generateId } from "@/lib/auth";
+import { getUserIdFromRequest } from "@/lib/auth-api";
+
 
 // GET /api/config/users?q= — search users by email or username (webmaster only)
 export async function GET(req: NextRequest) {
-  const userId = req.headers.get("x-user-id");
+  const userId = await getUserIdFromRequest(req);
   if (!userId || !(await isWebmaster(userId))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }

@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import pool from "@/lib/db";
+import { getUserIdFromRequest } from "@/lib/auth-api";
+import { verifyToken } from "@/lib/auth";
 
 export async function GET(req: NextRequest) {
-  const userId = req.headers.get("x-user-id");
-  const tokenVersion = req.headers.get("x-token-version");
-  if (!userId) {
-    return NextResponse.json({ user: null }, { status: 401 });
-  }
+  let userId = await getUserIdFromRequest(req);
+  let tokenVersion = req.headers.get("x-token-version");
 
   try {
     const result = await pool.query(

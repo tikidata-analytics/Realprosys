@@ -1,13 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import pool from "@/lib/db";
 import { isWebmaster } from "@/lib/users";
+import { getUserIdFromRequest } from "@/lib/auth-api";
+
 
 // GET /api/config/tier-history
 // Query params:
 //   user_q    — filter by affected user's email (partial match)
 //   action    — filter: "upgrade" | "downgrade" | undefined (all)
 export async function GET(req: NextRequest) {
-  const userId = req.headers.get("x-user-id");
+  const userId = await getUserIdFromRequest(req);
   if (!userId || !(await isWebmaster(userId))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }

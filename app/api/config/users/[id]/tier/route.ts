@@ -2,13 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 import pool from "@/lib/db";
 import { isWebmaster } from "@/lib/users";
 import { generateId } from "@/lib/auth";
+import { getUserIdFromRequest } from "@/lib/auth-api";
+
 
 // PUT /api/config/users/[id]/tier — change user tier/role + write audit log
 export async function PUT(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const userId = req.headers.get("x-user-id");
+  const userId = await getUserIdFromRequest(req);
   if (!userId || !(await isWebmaster(userId))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
