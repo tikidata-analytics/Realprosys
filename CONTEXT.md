@@ -35,3 +35,15 @@ _Avoid_: Client, buyer, applicant
 **Schedule**:
 The computed payment timeline produced when a Scheme is created. Contains the house price, per-stage rows (non-KPR as one-time payments, KPR as monthly amortisation with principal/interest split), and summary fields `kprAmount` and `kprMonthlyPayment`.
 _Avoid_: Payment plan (conflicts with PaymentPlan), timeline, amortization table
+
+**Tier**:
+A user's resource limit tier. `free` (max 2 per resource) or `premium` (max 10 per resource). Determines how many customers, payment plans, schemes, products, and projects the user can create.
+_Avoid_: Plan, level, package
+
+**Role**:
+A user's permission level. `webmaster` has unrestricted resource limits and access to the `/config` panel. `user` is subject to tier limits.
+_Avoid_: Permission, access level
+
+**TierChange**:
+An audit log entry recording a tier transition for a user: who changed it, from which tier to which tier, and when. Used when the webmaster manually upgrades or downgrades a user's tier.
+_Avoid_: Tier history, tier log
