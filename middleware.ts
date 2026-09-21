@@ -5,6 +5,7 @@ import { verifyToken } from "@/lib/auth";
 const SESSION_COOKIE = "realprosys_session";
 
 const PUBLIC_PATHS = [
+  "/",
   "/login",
   "/register",
   "/api/auth/login",
