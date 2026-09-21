@@ -6,7 +6,7 @@ import Link from "next/link";
 
 export default function ProtectedLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const [user, setUser] = useState<{ name: string; email: string } | null>(null);
+  const [user, setUser] = useState<{ name: string; email: string; role?: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -40,6 +40,8 @@ export default function ProtectedLayout({ children }: { children: React.ReactNod
     );
   }
 
+  const isWebmaster = user?.role === "webmaster";
+
   const navLinks = [
     { href: "/dashboard", label: "Dashboard" },
     { href: "/customers", label: "Pelanggan" },
@@ -47,6 +49,7 @@ export default function ProtectedLayout({ children }: { children: React.ReactNod
     { href: "/products", label: "Produk" },
     { href: "/payment-plans", label: "Rencana Bayar" },
     { href: "/schemes", label: "Skema" },
+    ...(isWebmaster ? [{ href: "/config", label: "Konfigurasi" }] : []),
   ];
 
   return (

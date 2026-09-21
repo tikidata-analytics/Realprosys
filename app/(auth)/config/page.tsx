@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 
 const RESOURCES = ["customers", "payment_plans", "schemes", "products", "projects"] as const;
 const TIERS = ["free", "premium"] as const;
@@ -25,8 +26,7 @@ export default function ConfigPage() {
     fetch("/api/config/limits")
       .then((r) => {
         if (r.status === 403) {
-          setError("Anda tidak memiliki akses ke halaman ini.");
-          setLoading(false);
+          window.location.href = "/dashboard";
           return;
         }
         return r.json();
