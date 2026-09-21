@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
     const tokenVersion = 1;
 
     await pool.query(
-      "INSERT INTO users (id, email, username, password_hash, name, token_version) VALUES ($1, $2, $3, $4, $5, $6)",
+      "INSERT INTO users (id, email, username, password_hash, name, token_version, role, tier) VALUES ($1, $2, $3, $4, $5, $6, 'user', 'free')",
       [id, normalizedEmail, normalizedUsername, passwordHash, name.trim(), tokenVersion]
     );
 

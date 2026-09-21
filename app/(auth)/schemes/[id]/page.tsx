@@ -188,15 +188,6 @@ export default function SchemeDetailPage() {
 
         {/* Share buttons */}
         <div className="flex items-center gap-2 pt-1">
-          <a
-            href={shareUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 text-white text-xs rounded-lg hover:bg-indigo-700 font-medium"
-          >
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
-            Share Public Link
-          </a>
           <button
             onClick={handleExportPdf}
             disabled={pdfLoading}
@@ -211,11 +202,11 @@ export default function SchemeDetailPage() {
           </button>
           <button
             onClick={copyLink}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 text-slate-700 text-xs rounded-lg hover:bg-slate-200 font-medium"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 text-white text-xs rounded-lg hover:bg-indigo-700 font-medium"
           >
             {copied ? (
               <>
-                <svg className="w-3.5 h-3.5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                <svg className="w-3.5 h-3.5 text-green-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
                 Tersalin!
               </>
             ) : (
@@ -255,7 +246,7 @@ export default function SchemeDetailPage() {
                         row.stage_type === "SETTLEMENT" ? "bg-purple-100 text-purple-700" :
                         "bg-slate-100 text-slate-700"
                       }`}>
-                        {row.stage_type === "BOOKING_FEE" ? "Booking Fee" :
+                        {row.stage_type === "BOOKING_FEE" ? (row.reduces_dp ? "Booking Fee include DP" : "Booking Fee") :
                          row.stage_type === "DOWN_PAYMENT" ? "Uang Muka" :
                          row.stage_type === "SETTLEMENT" ? "Pelunasan" :
                          row.stage_type}

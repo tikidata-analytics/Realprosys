@@ -151,7 +151,7 @@ export function SchemePdfDocument({ scheme, customer, product, project, nonKprSt
               <View key={i} style={i % 2 === 0 ? S.tblRow : S.tblRowAlt}>
                 <View style={{ flex: 1.5, flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                   <View style={S.badge}><Text style={S.badgeText}>
-                    {s.stage_type === 'BOOKING_FEE' ? 'Booking Fee' :
+                    {s.stage_type === 'BOOKING_FEE' ? (s.reduces_dp ? 'Booking Fee include DP' : 'Booking Fee') :
                      s.stage_type === 'DOWN_PAYMENT' ? `Uang Muka ${i + 1}` :
                      s.stage_type === 'SETTLEMENT' ? 'Pelunasan' : s.stage_type}
                   </Text></View>

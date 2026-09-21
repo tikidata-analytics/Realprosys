@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import pool from "@/lib/db";
 import { generateId } from "@/lib/auth";
+import { checkLimit, limitResponse } from "@/lib/limits";
 
 export async function GET(req: NextRequest) {
   const userId = req.headers.get("x-user-id");
@@ -20,6 +21,10 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const userId = req.headers.get("x-user-id");
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const limit = await checkLimit(userId, "customers");
+  if (!limit) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!limit.allowed) return limitResponse("customers");
 
   try {
     const { name, email, phone, birth_date, gender } = await req.json();

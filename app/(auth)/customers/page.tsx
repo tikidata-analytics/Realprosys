@@ -23,6 +23,8 @@ export default function CustomersPage() {
   const [loading, setLoading] = useState(false);
   const [sort, setSort] = useState("created_at:desc");
   const [page, setPage] = useState(1);
+  const [atLimit, setAtLimit] = useState(false);
+  const [limit, setLimit] = useState(0);
 
   useEffect(() => { fetchCustomers(); }, []);
 
@@ -30,6 +32,23 @@ export default function CustomersPage() {
     const r = await fetch("/api/customers");
     const data = await r.json();
     setCustomers(data);
+
+    // Check limit
+    const me = await fetch("/api/auth/me").then(r => r.json()).catch(() => null);
+    if (me?.user?.id) {
+      const limits = await fetch("/api/config/limits").then(r => r.json()).catch(() => []);
+      const userTier = me.user.tier || "free";
+      const userRole = me.user.role || "user";
+      if (userRole === "webmaster") {
+        setAtLimit(false);
+        setLimit(Infinity);
+      } else {
+        const myLimit = limits.find((l: any) => l.tier === userTier && l.resource === "customers");
+        const limitVal = myLimit?.limit_val ?? 0;
+        setLimit(limitVal);
+        setAtLimit(data.length >= limitVal && limitVal > 0);
+      }
+    }
   };
 
   const sorted = [...customers].sort((a, b) => {
@@ -86,10 +105,18 @@ export default function CustomersPage() {
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-xl font-bold text-slate-900">Pelanggan</h2>
         <button onClick={() => { setEditId(null); setShowForm(!showForm); }}
-          className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition">
+          disabled={atLimit}
+          title={atLimit ? `Limit ${limit} tercapai. Upgrade ke Premium untuk menambah.` : ""}
+          className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition disabled:opacity-50 disabled:cursor-not-allowed">
           {showForm && !editId ? "Batal" : "+ Tambah"}
         </button>
       </div>
+
+      {atLimit && (
+        <div className="mb-4 px-4 py-3 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-800">
+          Anda已达到 limit <strong>{customers.length}/{limit}</strong> pelanggan. Upgrade ke Premium untuk menambah.
+        </div>
+      )}
 
       {showForm && (
         <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-sm p-6 mb-6 space-y-4">

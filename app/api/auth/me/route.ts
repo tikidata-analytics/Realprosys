@@ -10,7 +10,7 @@ export async function GET(req: NextRequest) {
 
   try {
     const result = await pool.query(
-      "SELECT id, email, name, token_version FROM users WHERE id = $1",
+      "SELECT id, email, name, token_version, role, tier FROM users WHERE id = $1",
       [userId]
     );
     if (result.rows.length === 0) {
@@ -21,7 +21,7 @@ export async function GET(req: NextRequest) {
     if (tokenVersion && String(user.token_version) !== tokenVersion) {
       return NextResponse.json({ user: null, revoked: true }, { status: 401 });
     }
-    return NextResponse.json({ user: { id: user.id, email: user.email, name: user.name } });
+    return NextResponse.json({ user: { id: user.id, email: user.email, name: user.name, role: user.role, tier: user.tier } });
   } catch {
     return NextResponse.json({ user: null }, { status: 500 });
   }

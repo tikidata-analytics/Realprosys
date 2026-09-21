@@ -404,7 +404,7 @@ export default function NewSchemePage() {
                                 s.stage_type === "SETTLEMENT" ? "bg-purple-100 text-purple-700" :
                                 "bg-slate-100 text-slate-700"
                               }`}>
-                                {s.stage_type === "BOOKING_FEE" ? "Booking Fee" :
+                                {s.stage_type === "BOOKING_FEE" ? (s.reduces_dp ? "Booking Fee include DP" : "Booking Fee") :
                                  s.stage_type === "DOWN_PAYMENT" ? `Uang Muka ${dpCounter || ""}` :
                                  s.stage_type === "SETTLEMENT" ? "Pelunasan" :
                                  s.stage_type}

@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import KprChart from "@/components/KprChart";
+import { downloadPdf, SchemePdfDocument } from "@/components/SchemePdfDocument";
+import { pdf } from "@react-pdf/renderer";
 
 function formatCurrency(val: number) {
   return Number(val || 0).toLocaleString("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 });
@@ -14,6 +16,7 @@ export default function SharePage() {
   const [data, setData] = useState<any>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
+  const [pdfLoading, setPdfLoading] = useState(false);
 
   useEffect(() => {
     if (!username || !schemeId) return;
@@ -26,6 +29,31 @@ export default function SharePage() {
       })
       .catch(() => { setError("Skema tidak ditemukan"); setLoading(false); });
   }, [username, schemeId]);
+
+  const handleExportPdf = async () => {
+    if (!data || !sched) return;
+    setPdfLoading(true);
+    try {
+      const customer = { name: s.customer_name };
+      const product = { name: s.product_name, price: s.schedule.housePrice || 0 };
+      const project = { name: s.project_name };
+      await downloadPdf({
+        scheme: s,
+        customer,
+        product,
+        project,
+        nonKprStages: nonKprStages,
+        kprSchedule: kprStages.map((r: any) => ({ ...r, sebelum_pengurangan: r._runningBalance })),
+        kprPct,
+        totalKprPrincipal,
+        totalKprInterest,
+        kprMonthlyPayment: kprMonthly,
+        kprTenor: kprStages.length > 0 ? Math.round(kprStages.length / 12) : 0,
+      }, `skema-${s.name || schemeId}.pdf`);
+    } finally {
+      setPdfLoading(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -106,6 +134,18 @@ export default function SharePage() {
         <Link href="/register" className="px-4 py-1.5 bg-white text-indigo-700 rounded-lg text-sm font-medium hover:bg-indigo-50 transition">
           Buat Skema Saya →
         </Link>
+        <button
+          onClick={handleExportPdf}
+          disabled={pdfLoading}
+          className="px-4 py-1.5 bg-amber-500 text-white rounded-lg text-sm font-medium hover:bg-amber-600 transition disabled:opacity-50 flex items-center gap-1.5"
+        >
+          {pdfLoading ? (
+            <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+          ) : (
+            <span>📥</span>
+          )}
+          {pdfLoading ? "Membuat PDF..." : "Export PDF"}
+        </button>
       </div>
 
       {/* Summary */}
@@ -199,7 +239,7 @@ export default function SharePage() {
                         row.stage_type === "SETTLEMENT" ? "bg-purple-100 text-purple-700" :
                         "bg-slate-100 text-slate-700"
                       }`}>
-                        {row.stage_type === "BOOKING_FEE" ? "Booking Fee" :
+                        {row.stage_type === "BOOKING_FEE" ? (row.reduces_dp ? "Booking Fee include DP" : "Booking Fee") :
                          row.stage_type === "DOWN_PAYMENT" ? "Uang Muka" :
                          row.stage_type === "SETTLEMENT" ? "Pelunasan" :
                          row.stage_type}
