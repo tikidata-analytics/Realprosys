@@ -248,9 +248,6 @@ export default function NewSchemePage() {
                 onChange={(v) => { setForm({ ...form, booking_date: v }); setPreview(null); }}
                 required
               />
-              {form.booking_date && (
-                <p className="text-xs text-indigo-600 mt-1">{formatDate(form.booking_date)}</p>
-              )}
             </div>
           </div>
         </div>
