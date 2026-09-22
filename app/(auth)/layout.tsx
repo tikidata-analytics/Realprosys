@@ -73,6 +73,10 @@ export default function ProtectedLayout({ children }: { children: React.ReactNod
 
             <div className="hidden md:flex items-center gap-3">
               <span className="text-sm text-slate-600">{user?.name}</span>
+              <Link href="/profile"
+                className="px-3 py-2 text-sm font-medium text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition">
+                Edit Profil
+              </Link>
               <button onClick={handleLogout}
                 className="px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg transition">
                 Keluar
@@ -95,6 +99,10 @@ export default function ProtectedLayout({ children }: { children: React.ReactNod
                   {label}
                 </Link>
               ))}
+              <Link href="/profile" onClick={() => setMobileMenuOpen(false)}
+                className="px-3 py-2 text-sm font-medium text-slate-700 hover:bg-indigo-50 rounded-lg">
+                Edit Profil
+              </Link>
               <button onClick={handleLogout}
                 className="px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg text-left">
                 Keluar
