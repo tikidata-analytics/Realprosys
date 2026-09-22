@@ -460,6 +460,7 @@ function TierHistorySection() {
 // ─── Main page ────────────────────────────────────────────────
 
 export default function ConfigPage() {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<"limits" | "users" | "history">("limits");
   const [loading, setLoading] = useState(true);
 
@@ -467,14 +468,14 @@ export default function ConfigPage() {
     fetch("/api/config/limits")
       .then((r) => {
         if (r.status === 403) {
-          window.location.href = "/dashboard";
+          router.push("/dashboard");
           return null;
         }
         return r.json();
       })
       .then(() => setLoading(false))
       .catch(() => {
-        window.location.href = "/dashboard";
+        router.push("/dashboard");
       });
   }, []);
 
