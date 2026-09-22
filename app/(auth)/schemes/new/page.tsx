@@ -70,7 +70,10 @@ export default function NewSchemePage() {
       } else {
         amount = Number(stage.stage_value || 0);
       }
-      otherTotal += amount;
+      const reducesDp = !!stage.reduces_dp;
+      if (!reducesDp) {
+        otherTotal += amount;
+      }
       if (Number(stage.interval_months) > 0) {
         currentDate = new Date(currentDate);
         currentDate.setMonth(currentDate.getMonth() + Number(stage.interval_months));
