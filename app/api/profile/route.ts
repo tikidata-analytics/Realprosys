@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import pool from "@/lib/db";
 import { getUserIdFromRequest } from "@/lib/auth-api";
+import { verifyPassword, hashPassword } from "@/lib/auth";
 
 
 export async function PUT(req: NextRequest) {
@@ -8,7 +9,24 @@ export async function PUT(req: NextRequest) {
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   try {
-    const { name, username } = await req.json();
+    const { name, username, currentPassword, newPassword } = await req.json();
+
+    // Password change
+    if (currentPassword != null || newPassword != null) {
+      if (!currentPassword || !newPassword) {
+        return NextResponse.json({ error: "Password lama dan baru harus diisi." }, { status: 400 });
+      }
+      if (newPassword.length < 8 || !/[0-9]/.test(newPassword) || !/[a-zA-Z]/.test(newPassword)) {
+        return NextResponse.json({ error: "Password baru min 8 karakter, harus ada huruf dan angka." }, { status: 400 });
+      }
+      // Get current hash
+      const userRes = await pool.query("SELECT password_hash FROM users WHERE id = $1", [userId]);
+      if (userRes.rows.length === 0) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      const valid = await verifyPassword(currentPassword, userRes.rows[0].password_hash);
+      if (!valid) return NextResponse.json({ error: "Password lama salah." }, { status: 400 });
+      const hash = await hashPassword(newPassword);
+      await pool.query("UPDATE users SET password_hash = $1 WHERE id = $2", [hash, userId]);
+    }
 
     // Validate username format
     if (username != null && !/^[a-zA-Z0-9_]{3,20}$/.test(username)) {
