@@ -123,12 +123,10 @@ export default function ProfilePage() {
               className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Username <span className="text-red-500">*</span></label>
-            <input type="text" value={username} onChange={(e) => setUsername(e.target.value.toLowerCase())}
-              placeholder="contoh: budi_agent"
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-              required minLength={3} maxLength={20} pattern="[a-zA-Z0-9_]+" />
-            <p className="text-xs text-slate-400 mt-1">3-20 karakter, huruf, angka, underscore</p>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Username</label>
+            <input type="text" value={username} disabled
+              className="w-full px-4 py-2 border border-slate-200 rounded-lg bg-slate-50 text-slate-400 cursor-not-allowed" />
+            <p className="text-xs text-slate-400 mt-1">Username tidak bisa diubah setelah daftar</p>
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
