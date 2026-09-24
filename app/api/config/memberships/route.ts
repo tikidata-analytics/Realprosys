@@ -28,7 +28,9 @@ export async function GET(req: NextRequest) {
     );
 
     return NextResponse.json({ rows: result.rows, total, page, pageSize, totalPages: Math.ceil(total / pageSize) });
-  } catch { return NextResponse.json({ error: "Failed" }, { status: 500 }); }
+  } catch (e: any) {
+    console.error("GET /api/config/memberships error:", e);
+    return NextResponse.json({ error: "Failed", detail: e.message }, { status: 500 }); }
 }
 
 // POST /api/config/memberships — assign a membership to a user
