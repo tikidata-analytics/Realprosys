@@ -21,6 +21,23 @@ export async function checkLimit(
   if (!userResult.rows.length) return null;
   const tier = userResult.rows[0].tier;
 
+  // Check tier is active and within date window
+  const tierResult = await db.query(
+    "SELECT is_active, start_date, end_date FROM tiers WHERE name = $1",
+    [tier]
+  );
+  if (!tierResult.rows.length || !tierResult.rows[0].is_active) {
+    return { allowed: false, current: 0, limit: 0 };
+  }
+  const { start_date, end_date } = tierResult.rows[0];
+  const now = new Date();
+  if (start_date && new Date(start_date) > now) {
+    return { allowed: false, current: 0, limit: 0 }; // tier not yet started
+  }
+  if (end_date && new Date(end_date) < now) {
+    return { allowed: false, current: 0, limit: 0 }; // tier expired
+  }
+
   // Get limit for tier + resource
   const limitResult = await db.query(
     "SELECT limit_val FROM tier_limits WHERE tier = $1 AND resource = $2",
@@ -41,7 +58,7 @@ export async function checkLimit(
 export function limitResponse(resource: Resource) {
   return NextResponse.json(
     {
-      error: `Limit tercapai. Anda telah mencapai batas maksimal ${resource} untuk tier Anda. Upgrade ke Premium untuk menambah.`,
+      error: `Limit tercapai. Anda telah mencapai batas maksimal ${resource} untuk tier Anda.`,
     },
     { status: 403 }
   );
