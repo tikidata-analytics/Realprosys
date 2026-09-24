@@ -8,13 +8,47 @@ import { getUserIdFromRequest } from "@/lib/auth-api";
 export async function GET(req: NextRequest) {
   const userId = await getUserIdFromRequest(req);
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const { searchParams } = req.nextUrl;
+  const q = searchParams.get("q") || "";
+  const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10));
+  const sort = searchParams.get("sort") || "created_at:desc";
+  const PAGE_SIZE = 10;
+  const offset = (page - 1) * PAGE_SIZE;
+
+  const [orderBy, orderDir] = sort.split(":");
+  const allowedSortFields = ["name", "type", "price", "project_name", "land_area", "building_area", "bedrooms", "bathrooms", "created_at"];
+  const safeOrderBy = allowedSortFields.includes(orderBy) ? orderBy : "created_at";
+  const safeOrderDir = orderDir === "asc" ? "ASC" : "DESC";
+
   try {
+    const conditions = ["p.user_id = $1"];
+    const params: (string | number)[] = [userId];
+    let paramIdx = 2;
+
+    if (q) {
+      conditions.push(`(p.name ILIKE $${paramIdx} OR pr.name ILIKE $${paramIdx})`);
+      params.push(`%${q}%`);
+      paramIdx++;
+    }
+
+    const whereClause = conditions.join(" AND ");
+
+    const countResult = await pool.query(`SELECT COUNT(*) as total FROM products p LEFT JOIN projects pr ON p.project_id = pr.id WHERE ${whereClause}`, params);
+    const total = parseInt(countResult.rows[0].total, 10);
+
     const result = await pool.query(
-      "SELECT p.id, p.name, p.type, p.price, p.project_id, p.land_area, p.building_area, p.bedrooms, p.bathrooms, p.created_at, pr.name as project_name FROM products p LEFT JOIN projects pr ON p.project_id = pr.id WHERE p.user_id = $1 ORDER BY p.created_at DESC",
-      [userId]
+      `SELECT p.id, p.name, p.type, p.price, p.project_id, p.land_area, p.building_area, p.bedrooms, p.bathrooms, p.created_at, pr.name as project_name
+       FROM products p LEFT JOIN projects pr ON p.project_id = pr.id
+       WHERE ${whereClause}
+       ORDER BY ${safeOrderBy === "project_name" ? "pr.name" : "p." + safeOrderBy} ${safeOrderDir}
+       LIMIT ${PAGE_SIZE} OFFSET ${offset}`,
+      params
     );
-    return NextResponse.json(result.rows);
-  } catch {
+
+    return NextResponse.json({ rows: result.rows, total, page, pageSize: PAGE_SIZE, totalPages: Math.ceil(total / PAGE_SIZE) });
+  } catch (err) {
+    console.error("GET /api/products error:", err);
     return NextResponse.json({ error: "Failed" }, { status: 500 });
   }
 }

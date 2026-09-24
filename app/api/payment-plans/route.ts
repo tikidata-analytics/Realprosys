@@ -8,12 +8,41 @@ import { getUserIdFromRequest } from "@/lib/auth-api";
 export async function GET(req: NextRequest) {
   const userId = await getUserIdFromRequest(req);
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const { searchParams } = req.nextUrl;
+  const q = searchParams.get("q") || "";
+  const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10));
+  const sort = searchParams.get("sort") || "created_at:desc";
+  const PAGE_SIZE = 10;
+  const offset = (page - 1) * PAGE_SIZE;
+
+  const [orderBy, orderDir] = sort.split(":");
+  const allowedSortFields = ["name", "created_at"];
+  const safeOrderBy = allowedSortFields.includes(orderBy) ? orderBy : "created_at";
+  const safeOrderDir = orderDir === "asc" ? "ASC" : "DESC";
+
   try {
+    const conditions = ["user_id = $1"];
+    const params: (string | number)[] = [userId];
+    let paramIdx = 2;
+
+    if (q) {
+      conditions.push(`name ILIKE $${paramIdx}`);
+      params.push(`%${q}%`);
+      paramIdx++;
+    }
+
+    const whereClause = conditions.join(" AND ");
+
+    const countResult = await pool.query(`SELECT COUNT(*) as total FROM payment_plans WHERE ${whereClause}`, params);
+    const total = parseInt(countResult.rows[0].total, 10);
+
     const plans = await pool.query(
-      "SELECT id, user_id, name, created_at FROM payment_plans WHERE user_id = $1 ORDER BY created_at DESC",
-      [userId]
+      `SELECT id, user_id, name, created_at FROM payment_plans WHERE ${whereClause} ORDER BY ${safeOrderBy} ${safeOrderDir} LIMIT ${PAGE_SIZE} OFFSET ${offset}`,
+      params
     );
-    // Fetch stages for all plans
+
+    // Fetch stages for these plans
     const planIds = plans.rows.map((p) => p.id);
     let stages: Record<string, any[]> = {};
     if (planIds.length > 0) {
@@ -27,10 +56,12 @@ export async function GET(req: NextRequest) {
         stages[row.payment_plan_id].push(row);
       }
     }
+
     const result = plans.rows.map((p) => ({ ...p, stages: stages[p.id] || [] }));
-    return NextResponse.json(result);
+
+    return NextResponse.json({ rows: result, total, page, pageSize: PAGE_SIZE, totalPages: Math.ceil(total / PAGE_SIZE) });
   } catch (err) {
-    console.error(err);
+    console.error("GET /api/payment-plans error:", err);
     return NextResponse.json({ error: "Failed" }, { status: 500 });
   }
 }

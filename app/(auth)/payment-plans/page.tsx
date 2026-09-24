@@ -23,6 +23,8 @@ function emptyStage() {
 
 export default function PaymentPlansPage() {
   const [plans, setPlans] = useState<any[]>([]);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ name: "" });
   const [stages, setStages] = useState<any[]>([{ ...emptyStage(), stage_value: "20" }]);
@@ -32,13 +34,28 @@ export default function PaymentPlansPage() {
   const [page, setPage] = useState(1);
   const [atLimit, setAtLimit] = useState(false);
   const [limit, setLimit] = useState(0);
+  const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
 
-  useEffect(() => { fetchPlans(); }, []);
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search), 300);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  useEffect(() => { fetchPlans(); }, [debouncedSearch, page, sort]);
 
   const fetchPlans = async () => {
-    const r = await fetch("/api/payment-plans");
+    setLoading(true);
+    const params = new URLSearchParams({
+      page: String(page),
+      sort,
+      ...(debouncedSearch ? { q: debouncedSearch } : {}),
+    });
+    const r = await fetch(`/api/payment-plans?${params}`);
     const data = await r.json();
-    setPlans(data);
+    setPlans(data.rows || []);
+    setTotal(data.total || 0);
+    setTotalPages(data.totalPages || 1);
 
     const me = await fetch("/api/auth/me").then(r => r.json()).catch(() => null);
     if (me?.user?.id) {
@@ -52,20 +69,16 @@ export default function PaymentPlansPage() {
         const myLimit = limits.find((l: any) => l.tier === userTier && l.resource === "payment_plans");
         const limitVal = myLimit?.limit_val ?? 0;
         setLimit(limitVal);
-        setAtLimit(data.length >= limitVal && limitVal > 0);
+        setAtLimit((data.total || 0) >= limitVal && limitVal > 0);
       }
     }
+    setLoading(false);
   };
 
-  const sorted = [...plans].sort((a, b) => {
-    const { orderBy, orderDir } = parseSort(sort);
-    const va = (a as any)[orderBy] ?? "";
-    const vb = (b as any)[orderBy] ?? "";
-    const cmp = String(va).localeCompare(String(vb), "id");
-    return orderDir === "asc" ? cmp : -cmp;
-  });
-  const totalPages = Math.ceil(sorted.length / PAGE_SIZE) || 1;
-  const paginated = sorted.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const handleSort = (field: string) => {
+    setSort(toggleSort(sort, field));
+    setPage(1);
+  };
 
   const sortIcon = (field: string) => {
     const { orderBy, orderDir } = parseSort(sort);
@@ -197,17 +210,27 @@ export default function PaymentPlansPage() {
     <div>
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-xl font-bold text-slate-900">Rencana Pembayaran</h2>
-        <button onClick={() => { setShowForm(!showForm); setEditingId(null); setForm({ name: "" }); setStages([{ ...emptyStage(), stage_value: "20" }]); }}
-          disabled={atLimit}
-          title={atLimit ? `Limit ${limit} tercapai. Upgrade ke Premium untuk menambah.` : ""}
-          className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition disabled:opacity-50 disabled:cursor-not-allowed">
-          {showForm ? "Batal" : "+ Tambah"}
-        </button>
+        <div className="flex gap-3">
+          <input
+            type="text"
+            placeholder="Cari nama rencana..."
+            value={search}
+            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+            onKeyDown={(e) => { if (e.key === "Escape") { setSearch(""); setPage(1); }}}
+            className="px-4 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none w-64"
+          />
+          <button onClick={() => { setShowForm(!showForm); setEditingId(null); setForm({ name: "" }); setStages([{ ...emptyStage(), stage_value: "20" }]); }}
+            disabled={atLimit}
+            title={atLimit ? `Limit ${limit} tercapai. Upgrade ke Premium untuk menambah.` : ""}
+            className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition disabled:opacity-50 disabled:cursor-not-allowed">
+            {showForm ? "Batal" : "+ Tambah"}
+          </button>
+        </div>
       </div>
 
       {atLimit && (
         <div className="mb-4 px-4 py-3 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-800">
-          Anda已达到 limit <strong>{plans.length}/{limit}</strong> rencana pembayaran. Upgrade ke Premium untuk menambah.
+          Anda已达到 limit <strong>{total}/{limit}</strong> rencana pembayaran. Upgrade ke Premium untuk menambah.
         </div>
       )}
 
@@ -348,7 +371,7 @@ export default function PaymentPlansPage() {
               <thead className="bg-slate-50 border-b border-slate-200">
                 <tr>
                   <th className="text-left px-4 py-3 font-medium text-slate-600 cursor-pointer select-none hover:bg-slate-100"
-                    onClick={() => { setSort(toggleSort(sort, "name")); setPage(1); }}>
+                    onClick={() => handleSort("name")}>
                     <span className="flex items-center gap-1">Nama {sortIcon("name")}</span>
                   </th>
                   <th className="text-left px-4 py-3 font-medium text-slate-600">Tahapan</th>
@@ -356,7 +379,7 @@ export default function PaymentPlansPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {paginated.map((p) => (
+                {plans.map((p: any) => (
                   <tr key={p.id} className="hover:bg-slate-50">
                     <td className="px-4 py-3 font-medium text-slate-900">{p.name}</td>
                     <td className="px-4 py-3 text-slate-600">
@@ -377,7 +400,7 @@ export default function PaymentPlansPage() {
               </tbody>
             </table>
             <div className="flex items-center justify-between px-4 py-3 border-t border-slate-200 text-sm text-slate-500">
-              <span>{(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, plans.length)} dari {plans.length}</span>
+              <span>{(page - 1) * 10 + 1}–{Math.min(page * 10, total)} dari {total}</span>
               <div className="flex gap-1">
                 <button disabled={page === 1} onClick={() => setPage(1)} className="px-2 py-1 rounded hover:bg-slate-100 disabled:opacity-30">«</button>
                 <button disabled={page === 1} onClick={() => setPage(page - 1)} className="px-2 py-1 rounded hover:bg-slate-100 disabled:opacity-30">‹</button>

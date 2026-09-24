@@ -8,10 +8,45 @@ import { getUserIdFromRequest } from "@/lib/auth-api";
 export async function GET(req: NextRequest) {
   const userId = await getUserIdFromRequest(req);
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const { searchParams } = req.nextUrl;
+  const q = searchParams.get("q") || "";
+  const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10));
+  const sort = searchParams.get("sort") || "created_at:desc";
+  const PAGE_SIZE = 10;
+  const offset = (page - 1) * PAGE_SIZE;
+
+  const [orderBy, orderDir] = sort.split(":");
+  const allowedSortFields = ["name", "location", "created_at"];
+  const safeOrderBy = allowedSortFields.includes(orderBy) ? orderBy : "created_at";
+  const safeOrderDir = orderDir === "asc" ? "ASC" : "DESC";
+
   try {
-    const result = await pool.query("SELECT id, user_id, name, location, created_at FROM projects WHERE user_id = $1 ORDER BY created_at DESC", [userId]);
-    return NextResponse.json(result.rows);
-  } catch { return NextResponse.json({ error: "Failed" }, { status: 500 }); }
+    const conditions = ["user_id = $1"];
+    const params: (string | number)[] = [userId];
+    let paramIdx = 2;
+
+    if (q) {
+      conditions.push(`(name ILIKE $${paramIdx} OR location ILIKE $${paramIdx})`);
+      params.push(`%${q}%`);
+      paramIdx++;
+    }
+
+    const whereClause = conditions.join(" AND ");
+
+    const countResult = await pool.query(`SELECT COUNT(*) as total FROM projects WHERE ${whereClause}`, params);
+    const total = parseInt(countResult.rows[0].total, 10);
+
+    const result = await pool.query(
+      `SELECT id, user_id, name, location, created_at FROM projects WHERE ${whereClause} ORDER BY ${safeOrderBy} ${safeOrderDir} LIMIT ${PAGE_SIZE} OFFSET ${offset}`,
+      params
+    );
+
+    return NextResponse.json({ rows: result.rows, total, page, pageSize: PAGE_SIZE, totalPages: Math.ceil(total / PAGE_SIZE) });
+  } catch (err) {
+    console.error("GET /api/projects error:", err);
+    return NextResponse.json({ error: "Failed" }, { status: 500 });
+  }
 }
 
 export async function POST(req: NextRequest) {
