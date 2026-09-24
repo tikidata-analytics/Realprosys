@@ -3,7 +3,7 @@ import db from "@/lib/db";
 import { isWebmaster } from "@/lib/users";
 import { getUserIdFromRequest } from "@/lib/auth-api";
 
-// GET /api/config/tiers — list all tiers with their limits
+// Tier CRUD API — GET/POST /api/config/tiers
 export async function GET(req: NextRequest) {
   const userId = await getUserIdFromRequest(req);
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
