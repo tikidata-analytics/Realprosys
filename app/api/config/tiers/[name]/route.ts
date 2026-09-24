@@ -3,17 +3,13 @@ import db from "@/lib/db";
 import { isWebmaster } from "@/lib/users";
 import { getUserIdFromRequest } from "@/lib/auth-api";
 
-interface RouteParams {
-  params: { name: string };
-}
-
 // PUT /api/config/tiers/[name] — update tier metadata + limits
-export async function PUT(req: NextRequest, { params }: RouteParams) {
+export async function PUT(req: NextRequest, { params }: { params: Promise<{ name: string }> }) {
   const userId = await getUserIdFromRequest(req);
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   if (!(await isWebmaster(userId))) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
-  const { name } = params;
+  const { name } = await params;
   const body = await req.json();
   const { monthly_price, yearly_price, start_date, end_date, is_active, limits } = body;
 
@@ -73,12 +69,12 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
 }
 
 // DELETE /api/config/tiers/[name] — delete a tier
-export async function DELETE(req: NextRequest, { params }: RouteParams) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ name: string }> }) {
   const userId = await getUserIdFromRequest(req);
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   if (!(await isWebmaster(userId))) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
-  const { name } = params;
+  const { name } = await params;
 
   // Cannot delete free or premium
   if (name === "free" || name === "premium") {
