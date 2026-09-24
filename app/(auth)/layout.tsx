@@ -58,7 +58,7 @@ export default function ProtectedLayout({ children }: { children: React.ReactNod
         <div className="max-w-6xl mx-auto px-4 py-3">
           <div className="flex justify-between items-center">
             <div>
-              <Link href="/dashboard">
+              <Link href="/">
                 <h1 className="text-lg font-bold text-indigo-900 cursor-pointer">Realprosys</h1>
               </Link>
               <p className="text-xs text-slate-400">KPR Scheme Generator</p>

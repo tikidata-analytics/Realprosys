@@ -10,13 +10,13 @@ export default function LandingPage() {
     fetch("/api/auth/me")
       .then((r) => r.json())
       .then((d) => {
-        if (d.user) {
-          window.location.href = "/dashboard";
-        } else {
-          setChecking(false);
+        if (!d.user) {
+          // not logged in — show landing page as-is
         }
+        // if logged in: stay on homepage, server nav shows dashboard link
       })
-      .catch(() => setChecking(false));
+      .catch(() => {})
+      .finally(() => setChecking(false));
   }, []);
 
   if (checking) {
