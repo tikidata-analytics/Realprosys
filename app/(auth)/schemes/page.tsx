@@ -78,6 +78,12 @@ export default function SchemesPage() {
     return <span className="text-xs text-indigo-600">{orderDir === "asc" ? "↑" : "↓"}</span>;
   };
 
+  const handleDelete = async (id: string) => {
+    if (!confirm("Hapus skema ini?")) return;
+    await fetch(`/api/schemes/${id}`, { method: "DELETE" });
+    router.refresh();
+  };
+
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
@@ -180,10 +186,4 @@ export default function SchemesPage() {
       )}
     </div>
   );
-}
-
-async function handleDelete(id: string) {
-  if (!confirm("Hapus skema ini?")) return;
-  await fetch(`/api/schemes/${id}`, { method: "DELETE" });
-  window.location.reload();
 }

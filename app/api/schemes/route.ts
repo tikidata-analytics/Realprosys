@@ -28,7 +28,8 @@ export async function GET(req: NextRequest) {
        JOIN customers c ON s.customer_id = c.id
        JOIN products p ON s.product_id = p.id
        JOIN payment_plans pp ON s.payment_plan_id = pp.id
-       WHERE s.user_id = $1 AND s.name ILIKE $2`,
+       WHERE s.user_id = $1
+         AND (s.name ILIKE $2 OR c.name ILIKE $2 OR p.name ILIKE $2 OR pp.name ILIKE $2)`,
       [userId, `%${q}%`]
     );
     const total = parseInt(countResult.rows[0].total);
@@ -39,7 +40,8 @@ export async function GET(req: NextRequest) {
        JOIN customers c ON s.customer_id = c.id
        JOIN products p ON s.product_id = p.id
        JOIN payment_plans pp ON s.payment_plan_id = pp.id
-       WHERE s.user_id = $1 AND s.name ILIKE $2
+       WHERE s.user_id = $1
+         AND (s.name ILIKE $2 OR c.name ILIKE $2 OR p.name ILIKE $2 OR pp.name ILIKE $2)
        ORDER BY s.${safeOrderBy} ${safeOrderDir}
        LIMIT $3 OFFSET $4`,
       [userId, `%${q}%`, pageSize, offset]
