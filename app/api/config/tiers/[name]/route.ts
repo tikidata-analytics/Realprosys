@@ -11,10 +11,17 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ name
 
   const { name } = await params;
   const body = await req.json();
-  const { monthly_price, yearly_price, start_date, end_date, is_active, limits } = body;
+  const { monthly_price, yearly_price, permanent, start_date, end_date, is_active, limits } = body;
 
   if (monthly_price < 0 || yearly_price < 0) {
     return NextResponse.json({ error: "Harga tidak boleh negatif." }, { status: 400 });
+  }
+
+  // If not permanent, start_date and end_date are required
+  if (permanent === false) {
+    if (!start_date) return NextResponse.json({ error: "Tanggal mulai wajib diisi untuk tier tidak permanen." }, { status: 400 });
+    if (!end_date) return NextResponse.json({ error: "Tanggal berakhir wajib diisi untuk tier tidak permanen." }, { status: 400 });
+    if (start_date >= end_date) return NextResponse.json({ error: "Tanggal mulai harus sebelum tanggal berakhir." }, { status: 400 });
   }
 
   // Cannot deactivate free tier
@@ -31,11 +38,20 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ name
       `UPDATE tiers
        SET monthly_price = COALESCE($1, monthly_price),
            yearly_price  = COALESCE($2, yearly_price),
-           start_date    = $3,
-           end_date      = $4,
-           is_active     = COALESCE($5, is_active)
-       WHERE name = $6`,
-      [monthly_price, yearly_price, start_date ?? null, end_date ?? null, is_active ?? null, name]
+           permanent    = COALESCE($3, permanent),
+           start_date    = $4,
+           end_date      = $5,
+           is_active     = COALESCE($6, is_active)
+       WHERE name = $7`,
+      [
+        monthly_price ?? null,
+        yearly_price ?? null,
+        permanent ?? null,
+        permanent === false ? (start_date ?? null) : null,
+        permanent === false ? (end_date ?? null) : null,
+        is_active ?? null,
+        name,
+      ]
     );
 
     // Update limits if provided

@@ -15,6 +15,7 @@ interface TierDef {
   start_date: string | null;
   end_date: string | null;
   is_active: boolean;
+  permanent: boolean;
   limits: Record<string, number>;
   created_at?: string;
 }
@@ -44,7 +45,7 @@ function TierSection() {
   const [editing, setEditing] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<Partial<TierDef>>({});
   const [showCreate, setShowCreate] = useState(false);
-  const [createForm, setCreateForm] = useState({ name: "", monthly_price: "", yearly_price: "", start_date: "", end_date: "", is_active: true });
+  const [createForm, setCreateForm] = useState({ name: "", monthly_price: "", yearly_price: "", permanent: true, start_date: "", end_date: "", is_active: true });
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState("");
 
@@ -70,11 +71,13 @@ function TierSection() {
     if (!editing) return;
     setSaving(true);
     setError("");
+    const originalTier = tiers.find((t) => t.name === editing);
     try {
       const res = await fetch(`/api/config/tiers/${editing}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          permanent: editForm.permanent ?? originalTier?.permanent ?? true,
           monthly_price: Number(editForm.monthly_price) || 0,
           yearly_price: Number(editForm.yearly_price) || 0,
           start_date: editForm.start_date || null,
@@ -125,8 +128,9 @@ function TierSection() {
           name: createForm.name.trim().toLowerCase().replace(/\s+/g, "_"),
           monthly_price: Number(createForm.monthly_price) || 0,
           yearly_price: Number(createForm.yearly_price) || 0,
-          start_date: createForm.start_date || null,
-          end_date: createForm.end_date || null,
+          permanent: createForm.permanent,
+          start_date: createForm.permanent ? null : (createForm.start_date || null),
+          end_date: createForm.permanent ? null : (createForm.end_date || null),
           is_active: createForm.is_active,
         }),
       });

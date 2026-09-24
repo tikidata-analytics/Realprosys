@@ -39,7 +39,7 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-slate-50 px-4">
       <div className="w-full max-w-md bg-white rounded-xl shadow-md p-8 space-y-6">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-indigo-900">Realprosys</h1>
+          <Link href="/"><h1 className="text-2xl font-bold text-indigo-900 cursor-pointer">Realprosys</h1></Link>
           <p className="text-slate-500 text-sm mt-1">KPR Scheme Generator</p>
         </div>
         {error && (
