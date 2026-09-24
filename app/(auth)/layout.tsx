@@ -100,6 +100,16 @@ export default function ProtectedLayout({ children }: { children: React.ReactNod
                         </Link>
                       </>
                     )}
+                    <div className="border-t border-slate-100 my-1" />
+                    <Link href="/profile"
+                      onClick={() => setMenuOpen(false)}
+                      className="block px-4 py-2 text-sm text-slate-700 hover:bg-indigo-50 hover:text-indigo-700">
+                      Edit Profil
+                    </Link>
+                    <button onClick={() => { setMenuOpen(false); handleLogout(); }}
+                      className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50">
+                      Keluar
+                    </button>
                   </div>
                 )}
               </div>
@@ -143,6 +153,10 @@ export default function ProtectedLayout({ children }: { children: React.ReactNod
                   + Skema
                 </Link>
               </div>
+              <Link href="/profile" onClick={() => setMobileMenuOpen(false)}
+                className="mx-3 my-1 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-indigo-50 rounded-lg text-left">
+                Edit Profil
+              </Link>
               <button onClick={() => { setMobileMenuOpen(false); handleLogout(); }}
                 className="mx-3 my-1 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg text-left">
                 Keluar
