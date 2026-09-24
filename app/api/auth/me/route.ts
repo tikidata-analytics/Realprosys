@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import pool from "@/lib/db";
 import { getUserIdFromRequest } from "@/lib/auth-api";
 import { verifyToken } from "@/lib/auth";
+import { getEffectiveTier } from "@/lib/limits";
 
 export async function GET(req: NextRequest) {
   let userId = await getUserIdFromRequest(req);
@@ -20,7 +21,9 @@ export async function GET(req: NextRequest) {
     if (tokenVersion && String(user.token_version) !== tokenVersion) {
       return NextResponse.json({ user: null, revoked: true }, { status: 401 });
     }
-    return NextResponse.json({ user: { id: user.id, email: user.email, name: user.name, role: user.role, tier: user.tier } });
+    // Use effective tier from membership (not static users.tier)
+    const effectiveTier = await getEffectiveTier(userId);
+    return NextResponse.json({ user: { id: user.id, email: user.email, name: user.name, role: user.role, tier: effectiveTier } });
   } catch {
     return NextResponse.json({ user: null }, { status: 500 });
   }

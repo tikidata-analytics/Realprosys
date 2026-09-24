@@ -4,6 +4,28 @@ import { NextResponse } from "next/server";
 
 export type Resource = "customers" | "payment_plans" | "schemes" | "products" | "projects";
 
+export async function getEffectiveTier(userId: string): Promise<string> {
+  if (await isWebmaster(userId)) return "webmaster";
+  const today = new Date().toISOString().split("T")[0];
+  const membershipRes = await db.query(
+    `SELECT tier FROM user_memberships
+     WHERE user_id = $1 AND start_date <= $2 AND (end_date IS NULL OR end_date >= $2)
+     ORDER BY start_date DESC LIMIT 1`,
+    [userId, today]
+  );
+  const activeTier = membershipRes.rows[0]?.tier || "free";
+  // Check tier is active and within date window
+  const tierResult = await db.query(
+    `SELECT is_active, start_date, end_date FROM tiers WHERE name = $1`,
+    [activeTier]
+  );
+  if (!tierResult.rows.length || !tierResult.rows[0].is_active) return "free";
+  const { start_date, end_date } = tierResult.rows[0];
+  if (start_date && new Date(start_date) > new Date()) return "free";
+  if (end_date && new Date(end_date) < new Date()) return "free";
+  return activeTier;
+}
+
 export async function checkLimit(
   userId: string,
   resource: Resource
