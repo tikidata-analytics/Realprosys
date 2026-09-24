@@ -6,7 +6,7 @@ import Link from "next/link";
 
 export default function ProtectedLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const [user, setUser] = useState<{ name: string; email: string; role?: string } | null>(null);
+  const [user, setUser] = useState<{ name: string; email: string; role?: string; tier?: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -42,6 +42,7 @@ export default function ProtectedLayout({ children }: { children: React.ReactNod
   }
 
   const isWebmaster = user?.role === "webmaster";
+  const isFree = user?.tier === "free";
 
   const menuItems = [
     { href: "/customers", label: "Pelanggan" },
@@ -118,6 +119,12 @@ export default function ProtectedLayout({ children }: { children: React.ReactNod
                 className="px-4 py-2 text-sm font-bold bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition shadow-sm">
                 + Skema
               </Link>
+              {isFree && !isWebmaster && (
+                <Link href="/upgrade"
+                  className="px-4 py-2 text-sm font-bold bg-amber-400 text-amber-900 rounded-lg hover:bg-amber-500 transition shadow-sm">
+                  Upgrade
+                </Link>
+              )}
             </nav>
 
             <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="md:hidden p-2 text-slate-600">
@@ -152,6 +159,12 @@ export default function ProtectedLayout({ children }: { children: React.ReactNod
                   className="mx-3 px-4 py-2 text-sm font-bold bg-indigo-600 text-white rounded-lg text-center block">
                   + Skema
                 </Link>
+                {isFree && !isWebmaster && (
+                  <Link href="/upgrade" onClick={() => setMobileMenuOpen(false)}
+                    className="mx-3 my-1 px-4 py-2 text-sm font-bold bg-amber-400 text-amber-900 rounded-lg text-center block">
+                    Upgrade
+                  </Link>
+                )}
               </div>
               <Link href="/profile" onClick={() => setMobileMenuOpen(false)}
                 className="mx-3 my-1 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-indigo-50 rounded-lg text-left">
