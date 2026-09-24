@@ -13,7 +13,6 @@ const PUBLIC_PATHS = [
   "/api/auth/logout",
   "/share",
   "/api/share",
-  "/api/admin/migrations/add-featured",
 ];
 
 export async function middleware(req: NextRequest) {

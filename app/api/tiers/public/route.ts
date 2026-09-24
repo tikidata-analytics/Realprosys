@@ -7,12 +7,11 @@ export async function GET() {
   const now = new Date();
 
   const result = await db.query(
-    `SELECT name, monthly_price, yearly_price, is_active, permanent, start_date, end_date
+    `SELECT name, monthly_price, yearly_price, is_active, permanent, start_date, end_date, featured
      FROM tiers
      WHERE is_active = TRUE
-       AND (permanent = TRUE OR (start_date IS NULL OR start_date <= $1))
-       AND (permanent = TRUE OR (end_date IS NULL OR end_date >= $1))
-     ORDER BY monthly_price ASC`,
+       AND (permanent = TRUE OR (start_date <= $1 AND end_date >= $1))
+     ORDER BY featured DESC, monthly_price ASC`,
     [now]
   );
 
@@ -32,6 +31,7 @@ export async function GET() {
     permanent: t.permanent,
     start_date: t.start_date,
     end_date: t.end_date,
+    featured: t.featured,
     limits: limitsMap[t.name] || {},
   }));
 

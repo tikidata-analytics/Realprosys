@@ -11,7 +11,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ name
 
   const { name } = await params;
   const body = await req.json();
-  const { monthly_price, yearly_price, permanent, start_date, end_date, is_active, limits } = body;
+  const { monthly_price, yearly_price, permanent, start_date, end_date, is_active, featured, limits } = body;
 
   if (monthly_price < 0 || yearly_price < 0) {
     return NextResponse.json({ error: "Harga tidak boleh negatif." }, { status: 400 });
@@ -33,6 +33,11 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ name
   try {
     await client.query("BEGIN");
 
+    // Radio behavior: if this tier is being set as featured, clear featured on all others first
+    if (featured === true) {
+      await client.query(`UPDATE tiers SET featured = false WHERE featured = true`);
+    }
+
     // Update tier metadata
     await client.query(
       `UPDATE tiers
@@ -41,8 +46,9 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ name
            permanent    = COALESCE($3, permanent),
            start_date    = $4,
            end_date      = $5,
-           is_active     = COALESCE($6, is_active)
-       WHERE name = $7`,
+           is_active     = COALESCE($6, is_active),
+           featured     = COALESCE($7, featured)
+       WHERE name = $8`,
       [
         monthly_price ?? null,
         yearly_price ?? null,
@@ -50,6 +56,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ name
         permanent === false ? (start_date ?? null) : null,
         permanent === false ? (end_date ?? null) : null,
         is_active ?? null,
+        featured ?? null,
         name,
       ]
     );

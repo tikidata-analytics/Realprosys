@@ -14,6 +14,7 @@ interface PublicTier {
   permanent: boolean;
   start_date: string | null;
   end_date: string | null;
+  featured: boolean;
   limits: Record<string, number>;
 }
 
@@ -81,7 +82,11 @@ function PricingSection() {
                   isDark ? "bg-indigo-900 border-indigo-700" : "bg-white border-slate-200 shadow-sm"
                 }`}
               >
-                {!isFree && (
+                {tier.featured ? (
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-rose-500 text-white text-xs font-bold px-4 py-1 rounded-full">
+                    FEATURED
+                  </div>
+                ) : !isFree && (
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-amber-400 text-amber-900 text-xs font-bold px-4 py-1 rounded-full">
                     POPULER
                   </div>

@@ -10,7 +10,7 @@ export async function GET(req: NextRequest) {
   if (!(await isWebmaster(userId))) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const result = await db.query(
-    `SELECT name, monthly_price, yearly_price, start_date, end_date, is_active, permanent, created_at
+    `SELECT name, monthly_price, yearly_price, start_date, end_date, is_active, permanent, featured, created_at
      FROM tiers ORDER BY created_at ASC`
   );
 
@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
   if (!(await isWebmaster(userId))) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const body = await req.json();
-  const { name, monthly_price = 0, yearly_price = 0, permanent = true, start_date = null, end_date = null, is_active = true } = body;
+  const { name, monthly_price = 0, yearly_price = 0, permanent = true, start_date = null, end_date = null, is_active = true, featured = false } = body;
 
   if (!name || typeof name !== "string" || name.trim().length === 0) {
     return NextResponse.json({ error: "Nama tier wajib diisi." }, { status: 400 });
@@ -65,10 +65,15 @@ export async function POST(req: NextRequest) {
   try {
     await client.query("BEGIN");
 
+    // Radio behavior: if this tier is featured, clear featured on all others first
+    if (featured) {
+      await client.query(`UPDATE tiers SET featured = false WHERE featured = true`);
+    }
+
     await client.query(
-      `INSERT INTO tiers (name, monthly_price, yearly_price, permanent, start_date, end_date, is_active)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-      [tierName, monthly_price, yearly_price, permanent, permanent ? null : start_date, permanent ? null : end_date, is_active]
+      `INSERT INTO tiers (name, monthly_price, yearly_price, permanent, start_date, end_date, is_active, featured)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+      [tierName, monthly_price, yearly_price, permanent, permanent ? null : start_date, permanent ? null : end_date, is_active, featured]
     );
 
     // Seed default limits (same as free: 2 per resource) for the new tier

@@ -16,6 +16,7 @@ interface TierDef {
   end_date: string | null;
   is_active: boolean;
   permanent: boolean;
+  featured: boolean;
   limits: Record<string, number>;
   created_at?: string;
 }
@@ -45,7 +46,7 @@ function TierSection() {
   const [editing, setEditing] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<Partial<TierDef>>({});
   const [showCreate, setShowCreate] = useState(false);
-  const [createForm, setCreateForm] = useState({ name: "", monthly_price: "", yearly_price: "", permanent: true, start_date: "", end_date: "", is_active: true });
+  const [createForm, setCreateForm] = useState({ name: "", monthly_price: "", yearly_price: "", permanent: true, start_date: "", end_date: "", is_active: true, featured: false });
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState("");
 
@@ -83,6 +84,7 @@ function TierSection() {
           start_date: editForm.start_date || null,
           end_date: editForm.end_date || null,
           is_active: editForm.is_active,
+          featured: editForm.featured,
           limits: editForm.limits,
         }),
       });
@@ -132,6 +134,7 @@ function TierSection() {
           start_date: createForm.permanent ? null : (createForm.start_date || null),
           end_date: createForm.permanent ? null : (createForm.end_date || null),
           is_active: createForm.is_active,
+          featured: createForm.featured,
         }),
       });
       if (!res.ok) {
@@ -140,7 +143,7 @@ function TierSection() {
       }
       await fetchTiers();
       setShowCreate(false);
-      setCreateForm({ name: "", monthly_price: "", yearly_price: "", permanent: true, start_date: "", end_date: "", is_active: true });
+      setCreateForm({ name: "", monthly_price: "", yearly_price: "", permanent: true, start_date: "", end_date: "", is_active: true, featured: false });
     } catch (e: any) {
       setError(e.message);
     } finally {
@@ -179,6 +182,7 @@ function TierSection() {
                 <th className="text-center px-4 py-3 font-medium text-slate-600">Harga Bulanan</th>
                 <th className="text-center px-4 py-3 font-medium text-slate-600">Harga Tahunan</th>
                 <th className="text-center px-4 py-3 font-medium text-slate-600">Berlaku</th>
+                <th className="text-center px-4 py-3 font-medium text-slate-600">Featured</th>
                 <th className="text-center px-4 py-3 font-medium text-slate-600">Status</th>
                 <th className="text-right px-4 py-3 font-medium text-slate-600">Aksi</th>
               </tr>
@@ -223,6 +227,14 @@ function TierSection() {
                           </>
                         )}
                       </td>
+                      <td className="px-4 py-3 text-center">
+                        <label className="flex items-center gap-1.5 cursor-pointer">
+                          <input type="checkbox"
+                            checked={editForm.featured ?? false}
+                            onChange={(e) => setEditForm({ ...editForm, featured: e.target.checked })}
+                            className="rounded border-slate-300 text-indigo-600" />
+                        </label>
+                      </td>
                       <td className="px-4 py-3">
                         <label className="flex items-center gap-1.5 cursor-pointer">
                           <input type="checkbox"
@@ -259,6 +271,11 @@ function TierSection() {
                           <span className="text-xs text-slate-500">
                             {fmtDate(t.start_date as string)} — {fmtDate(t.end_date as string)}
                           </span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        {t.featured && (
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 font-medium">Featured</span>
                         )}
                       </td>
                       <td className="px-4 py-3 text-center">
@@ -341,6 +358,12 @@ function TierSection() {
                 </div>
               </div>
             )}
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" checked={createForm.featured}
+                onChange={(e) => setCreateForm({ ...createForm, featured: e.target.checked })}
+                className="rounded border-slate-300 text-indigo-600" />
+              <span className="text-sm text-slate-700">Featured — tampilkan badge FEATURED di pricing table</span>
+            </label>
             <label className="flex items-center gap-2 cursor-pointer">
               <input type="checkbox" checked={createForm.is_active}
                 onChange={(e) => setCreateForm({ ...createForm, is_active: e.target.checked })}
