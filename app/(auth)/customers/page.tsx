@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { formatDate, parseSort, toggleSort } from "@/lib/formatters";
+import { exportToExcel, ExportColumn } from "@/lib/excel";
 
 interface Customer {
   id: string;
@@ -30,6 +31,7 @@ export default function CustomersPage() {
   const [limit, setLimit] = useState(0);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(search), 300);
@@ -39,6 +41,29 @@ export default function CustomersPage() {
   useEffect(() => {
     fetchCustomers();
   }, [debouncedSearch, page, sort]);
+
+  const fetchCustomersPage = async (pageNum: number, currentSort: string, q?: string) => {
+    const params = new URLSearchParams({ page: String(pageNum), sort: currentSort, ...(q ? { q } : {}) });
+    const r = await fetch(`/api/customers?${params}`);
+    return r.json();
+  };
+
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      const columns: ExportColumn<Customer>[] = [
+        { header: "Nama", accessor: (c) => c.name },
+        { header: "Email", accessor: (c) => c.email ?? "" },
+        { header: "Telepon", accessor: (c) => c.phone ?? "" },
+        { header: "Gender", accessor: (c) => (c.gender === "LAKI" ? "Laki-laki" : c.gender === "PEREMPUAN" ? "Perempuan" : "") },
+        { header: "Tgl Lahir", accessor: (c) => formatDate(c.birth_date) },
+        { header: "Dibuat", accessor: (c) => formatDate(c.created_at) },
+      ];
+      await exportToExcel("Pelanggan", columns, fetchCustomersPage, sort, debouncedSearch || undefined);
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const fetchCustomers = async () => {
     setLoading(true);
@@ -129,6 +154,10 @@ export default function CustomersPage() {
             onKeyDown={(e) => { if (e.key === "Escape") { setSearch(""); setPage(1); }}}
             className="px-4 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none w-64"
           />
+          <button onClick={handleExport} disabled={exporting || total === 0}
+            className="px-4 py-2 border border-slate-300 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50 transition disabled:opacity-50 disabled:cursor-not-allowed">
+            {exporting ? "Exporting..." : "Export Excel"}
+          </button>
           <button onClick={() => { setEditId(null); setShowForm(!showForm); }}
             disabled={atLimit}
             title={atLimit ? `Limit ${limit} tercapai. Upgrade ke Premium untuk menambah.` : ""}

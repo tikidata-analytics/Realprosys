@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { formatCurrency, parseSort, toggleSort } from "@/lib/formatters";
+import { exportToExcel, ExportColumn } from "@/lib/excel";
 
 interface Project {
   id: string;
@@ -42,6 +43,7 @@ export default function ProductsPage() {
   const [limit, setLimit] = useState(0);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(search), 300);
@@ -56,6 +58,31 @@ export default function ProductsPage() {
     const r = await fetch("/api/projects?page=1&sort=name:asc");
     const data = await r.json();
     setProjects(data.rows || []);
+  };
+
+  const fetchProductsPage = async (pageNum: number, currentSort: string, q?: string) => {
+    const params = new URLSearchParams({ page: String(pageNum), sort: currentSort, ...(q ? { q } : {}) });
+    const r = await fetch(`/api/products?${params}`);
+    return r.json();
+  };
+
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      const columns: ExportColumn<Product>[] = [
+        { header: "Nama", accessor: (p) => p.name },
+        { header: "Proyek", accessor: (p) => p.project_name ?? "" },
+        { header: "Tipe", accessor: (p) => p.type },
+        { header: "Harga", accessor: (p) => formatCurrency(p.price) },
+        { header: "Luas Bangunan", accessor: (p) => p.building_area ?? "" },
+        { header: "Luas Tanah", accessor: (p) => p.land_area ?? "" },
+        { header: "Kamar Tidur", accessor: (p) => p.bedrooms ?? "" },
+        { header: "Kamar Mandi", accessor: (p) => p.bathrooms ?? "" },
+      ];
+      await exportToExcel("Produk", columns, fetchProductsPage, sort, debouncedSearch || undefined);
+    } finally {
+      setExporting(false);
+    }
   };
 
   const fetchProducts = async () => {
@@ -159,6 +186,10 @@ export default function ProductsPage() {
             onKeyDown={(e) => { if (e.key === "Escape") { setSearch(""); setPage(1); }}}
             className="px-4 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none w-64"
           />
+          <button onClick={handleExport} disabled={exporting || total === 0}
+            className="px-4 py-2 border border-slate-300 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50 transition disabled:opacity-50 disabled:cursor-not-allowed">
+            {exporting ? "Exporting..." : "Export Excel"}
+          </button>
           <button onClick={() => { setEditId(null); setShowForm(!showForm); }}
             disabled={atLimit}
             title={atLimit ? `Limit ${limit} tercapai. Upgrade ke Premium untuk menambah.` : ""}
