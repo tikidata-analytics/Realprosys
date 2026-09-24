@@ -27,17 +27,7 @@ interface LimitRow {
   limit_val: number;
 }
 
-interface UserResult {
-  id: string;
-  email: string;
-  username: string;
-  name: string;
-  role: string;
-  tier: string;
-  created_at: string;
-}
-
-// ─── Tier CRUD section ───────────────────────────────────────────
+// ─── Tier section ───────────────────────────────────────────
 
 function TierSection() {
   const [tiers, setTiers] = useState<TierDef[]>([]);
@@ -498,158 +488,6 @@ function LimitsSection() {
   );
 }
 
-// ─── User Management section (dynamic tier list) ─────────────────
-
-function UserManagementSection() {
-  const [query, setQuery] = useState("");
-  const [results, setResults] = useState<UserResult[]>([]);
-  const [searching, setSearching] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<UserResult | null>(null);
-  const [newTier, setNewTier] = useState("");
-  const [newRole, setNewRole] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
-  const [error, setError] = useState("");
-  const [availableTiers, setAvailableTiers] = useState<string[]>([]);
-
-  useEffect(() => {
-    fetch("/api/config/tiers")
-      .then((r) => r.json())
-      .then((data: TierDef[]) => setAvailableTiers(data.map((t) => t.name)));
-  }, []);
-
-  const handleSearch = async (q: string) => {
-    setQuery(q);
-    setSelectedUser(null);
-    setSaved(false);
-    if (q.length < 2) { setResults([]); return; }
-    setSearching(true);
-    try {
-      const res = await fetch(`/api/config/users?q=${encodeURIComponent(q)}`);
-      if (!res.ok) throw new Error();
-      setResults(await res.json());
-    } catch {
-      setError("Pencarian gagal.");
-      setResults([]);
-    } finally {
-      setSearching(false);
-    }
-  };
-
-  const selectUser = (user: UserResult) => {
-    setSelectedUser(user);
-    setNewTier(user.tier);
-    setNewRole(user.role);
-    setSaved(false);
-    setError("");
-  };
-
-  const handleSave = async () => {
-    if (!selectedUser) return;
-    setSaving(true);
-    setError("");
-    try {
-      const body: { tier?: string; role?: string } = {};
-      if (newTier !== selectedUser.tier) body.tier = newTier;
-      if (newRole !== selectedUser.role) body.role = newRole;
-      if (!body.tier && !body.role) return;
-
-      const res = await fetch(`/api/config/users/${selectedUser.id}/tier`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      if (!res.ok) throw new Error();
-      const updated = await res.json();
-      setSelectedUser((u) => u ? { ...u, tier: updated.tier, role: updated.role } : u);
-      setResults((prev) => prev.map((u) => u.id === selectedUser.id ? { ...u, tier: updated.tier, role: updated.role } : u));
-      setSaved(true);
-      setTimeout(() => setSaved(false), 3000);
-    } catch {
-      setError("Gagal menyimpan perubahan.");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-      <div className="px-4 py-3 border-b border-slate-200">
-        <p className="text-sm text-slate-500">Ubah tier atau role user. Setiap perubahan dicatat dalam audit log.</p>
-      </div>
-      <div className="px-4 py-4 border-b border-slate-100">
-        <input type="text" placeholder="Cari email atau username..." value={query}
-          onChange={(e) => handleSearch(e.target.value)}
-          className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none text-sm" />
-        {searching && <p className="text-xs text-slate-400 mt-1">Mencari...</p>}
-      </div>
-
-      {results.length > 0 && !selectedUser && (
-        <div className="divide-y divide-slate-100">
-          {results.map((user) => (
-            <button key={user.id} onClick={() => selectUser(user)}
-              className="w-full px-4 py-3 text-left hover:bg-indigo-50 transition flex items-center justify-between">
-              <div>
-                <div className="text-sm font-medium text-slate-800">{user.name || user.username}</div>
-                <div className="text-xs text-slate-400">{user.email} · @{user.username}</div>
-              </div>
-              <div className="flex gap-2">
-                <span className={`text-xs px-2 py-0.5 rounded-full ${user.tier === "premium" ? "bg-amber-100 text-amber-700" : "bg-slate-100 text-slate-600"}`}>
-                  {user.tier}
-                </span>
-                <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">{user.role}</span>
-              </div>
-            </button>
-          ))}
-        </div>
-      )}
-
-      {query.length >= 2 && results.length === 0 && !searching && (
-        <div className="px-4 py-6 text-center text-sm text-slate-400">Tidak ditemukan.</div>
-      )}
-
-      {selectedUser && (
-        <div className="px-4 py-4 border-t border-slate-100">
-          <div className="flex items-start justify-between mb-4">
-            <div>
-              <div className="text-sm font-medium text-slate-800">{selectedUser.name || selectedUser.username}</div>
-              <div className="text-xs text-slate-400">{selectedUser.email} · @{selectedUser.username}</div>
-            </div>
-            <button onClick={() => { setSelectedUser(null); setQuery(""); setResults([]); }}
-              className="text-xs text-slate-400 hover:text-slate-600">✕ Batal</button>
-          </div>
-          <div className="grid grid-cols-2 gap-4 mb-4">
-            <div>
-              <label className="block text-xs font-medium text-slate-500 mb-1">Tier</label>
-              <select value={newTier} onChange={(e) => setNewTier(e.target.value)}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
-                {availableTiers.map((t) => <option key={t} value={t}>{t}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-slate-500 mb-1">Role</label>
-              <select value={newRole} onChange={(e) => setNewRole(e.target.value)}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
-                <option value="user">User</option>
-                <option value="webmaster">Webmaster</option>
-              </select>
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <button onClick={handleSave} disabled={saving || (newTier === selectedUser.tier && newRole === selectedUser.role)}
-              className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 flex items-center gap-2">
-              {saving ? <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : null}
-              {saving ? "Menyimpan..." : "Simpan Perubahan"}
-            </button>
-            {saved && <span className="text-sm text-green-600">✓ Tersimpan</span>}
-            {error && <span className="text-sm text-red-600">{error}</span>}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
 // ─── Tier History section ────────────────────────────────────────
 
 interface HistoryRow {
@@ -996,7 +834,7 @@ function TierHistorySection() {
 
 export default function ConfigPage() {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<"tiers" | "limits" | "memberships" | "users" | "history">("tiers");
+  const [activeTab, setActiveTab] = useState<"tiers" | "limits" | "memberships" | "history">("tiers");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -1025,10 +863,10 @@ export default function ConfigPage() {
       </div>
 
       <div className="flex gap-1 mb-6 border-b border-slate-200">
-        {(["tiers", "limits", "memberships", "users", "history"] as const).map((tab) => (
+        {(["tiers", "limits", "memberships", "history"] as const).map((tab) => (
           <button key={tab} onClick={() => setActiveTab(tab)}
             className={`px-4 py-2 text-sm font-medium border-b-2 transition ${activeTab === tab ? "border-indigo-600 text-indigo-600" : "border-transparent text-slate-500 hover:text-slate-700"}`}>
-            {tab === "tiers" ? "Tier" : tab === "limits" ? "Tier Limits" : tab === "memberships" ? "Membership" : tab === "users" ? "Manajemen User" : "Riwayat Tier"}
+            {tab === "tiers" ? "Tier" : tab === "limits" ? "Tier Limits" : tab === "memberships" ? "Membership" : "Riwayat Tier"}
           </button>
         ))}
       </div>
@@ -1036,7 +874,6 @@ export default function ConfigPage() {
       {activeTab === "tiers" ? <TierSection /> :
        activeTab === "limits" ? <LimitsSection /> :
        activeTab === "memberships" ? <MembershipSection /> :
-       activeTab === "users" ? <UserManagementSection /> :
        <TierHistorySection />}
     </div>
   );
