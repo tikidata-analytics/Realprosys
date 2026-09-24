@@ -8,7 +8,7 @@ export async function POST() {
     await db.query(`
       CREATE TABLE IF NOT EXISTS user_memberships (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        user_id UUID NOT NULL,
         tier VARCHAR(50) NOT NULL DEFAULT 'free',
         start_date DATE NOT NULL DEFAULT CURRENT_DATE,
         end_date DATE,
