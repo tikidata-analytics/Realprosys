@@ -37,7 +37,7 @@ The computed payment timeline produced when a Scheme is created. Contains the ho
 _Avoid_: Payment plan (conflicts with PaymentPlan), timeline, amortization table
 
 **Tier**:
-A user's resource limit tier. `free` (max 2 per resource) or `premium` (max 10 per resource). Determines how many customers, payment plans, schemes, products, and projects the user can create.
+A named, database-backed resource limit tier. Stored in the `tiers` table. Each tier has: `name` (unique key), `monthly_price`, `yearly_price`, `is_active`, `permanent` (if true, no date window; if false, `start_date` and `end_date` are required and the tier is only purchasable within that window), `featured` (at most one tier has `featured=true` at any time — radio behaviour; the homepage pricing table shows a "FEATURED" badge on this tier), and resource limits stored in `tier_limits` (FK to `tiers`).
 _Avoid_: Plan, level, package
 
 **Role**:
