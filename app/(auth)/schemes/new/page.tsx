@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { formatCurrency, formatDate } from "@/lib/formatters";
 import DatePicker from "@/components/DatePicker";
 import KprChart from "@/components/KprChart";
 
 export default function NewSchemePage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [customers, setCustomers] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
   const [showAllKpr, setShowAllKpr] = useState(false);
@@ -24,11 +25,24 @@ export default function NewSchemePage() {
       fetch("/api/products").then((r) => r.json()),
       fetch("/api/payment-plans").then((r) => r.json()),
     ]).then(([c, p, pp]) => {
-      setCustomers(c);
-      setProducts(p);
-      setPaymentPlans(pp);
+      const customerList = c.rows || [];
+      const productList = p.rows || [];
+      const planList = pp.rows || [];
+      setCustomers(customerList);
+      setProducts(productList);
+      setPaymentPlans(planList);
+
+      // Pre-select from URL params
+      const preCustomerId = searchParams.get("customer_id");
+      const preProductId = searchParams.get("product_id");
+      if (preCustomerId) {
+        setForm(f => ({ ...f, customer_id: preCustomerId }));
+      }
+      if (preProductId) {
+        setForm(f => ({ ...f, product_id: preProductId }));
+      }
     });
-  }, []);
+  }, [searchParams]);
 
   const handlePreview = async () => {
     if ((!showNewCustomer && !form.customer_id) || !form.product_id || !form.payment_plan_id || !form.booking_date) return;

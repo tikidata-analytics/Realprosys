@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { formatCurrency, parseSort, toggleSort } from "@/lib/formatters";
 
 interface Project {
@@ -25,6 +26,7 @@ interface Product {
 const PAGE_SIZE = 10;
 
 export default function ProductsPage() {
+  const router = useRouter();
   const [products, setProducts] = useState<Product[]>([]);
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
@@ -243,6 +245,7 @@ export default function ProductsPage() {
                     <td className="px-4 py-3 text-right text-slate-500">{p.building_area}/{p.land_area}</td>
                     <td className="px-4 py-3 text-right text-slate-500">{p.bedrooms}/{p.bathrooms}</td>
                     <td className="px-4 py-3 text-right">
+                      <button onClick={() => router.push(`/schemes/new?product_id=${p.id}`)} className="px-3 py-1 text-xs text-indigo-600 hover:bg-indigo-50 rounded-lg mr-1">Skema</button>
                       <button onClick={() => openEdit(p)} className="px-3 py-1 text-xs text-indigo-600 hover:bg-indigo-50 rounded-lg mr-1">Edit</button>
                       <button onClick={() => handleDelete(p.id)} className="px-3 py-1 text-xs text-red-600 hover:bg-red-50 rounded-lg">Hapus</button>
                     </td>

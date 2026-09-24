@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { formatDate, parseSort, toggleSort } from "@/lib/formatters";
 
 interface Customer {
@@ -14,6 +15,7 @@ interface Customer {
 }
 
 export default function CustomersPage() {
+  const router = useRouter();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
@@ -208,6 +210,7 @@ export default function CustomersPage() {
                     <td className="px-4 py-3 text-slate-500">{formatDate(c.birth_date)}</td>
                     <td className="px-4 py-3 text-slate-500">{formatDate(c.created_at)}</td>
                     <td className="px-4 py-3 text-right">
+                      <button onClick={() => router.push(`/schemes/new?customer_id=${c.id}`)} className="px-3 py-1 text-xs text-indigo-600 hover:bg-indigo-50 rounded-lg mr-1">Skema</button>
                       <button onClick={() => openEdit(c)} className="px-3 py-1 text-xs text-indigo-600 hover:bg-indigo-50 rounded-lg mr-1">Edit</button>
                       <button onClick={() => handleDelete(c.id)} className="px-3 py-1 text-xs text-red-600 hover:bg-red-50 rounded-lg">Hapus</button>
                     </td>
