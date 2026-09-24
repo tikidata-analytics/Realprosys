@@ -4,8 +4,143 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
+// ─── Types ────────────────────────────────────────────────────────
+
+interface PublicTier {
+  name: string;
+  monthly_price: string | number;
+  yearly_price: string | number;
+  is_active: boolean;
+  permanent: boolean;
+  start_date: string | null;
+  end_date: string | null;
+  limits: Record<string, number>;
+}
+
+// ─── Pricing Section ────────────────────────────────────────────
+
+function formatPrice(v: string | number) {
+  const n = Number(v);
+  if (n === 0) return "Rp 0";
+  return `Rp ${n.toLocaleString("id-ID")}`;
+}
+
+function PricingSection() {
+  const [tiers, setTiers] = useState<PublicTier[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/tiers/public")
+      .then((r) => r.json())
+      .then((d) => { setTiers(d); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, []);
+
+  if (loading) {
+    return (
+      <section className="py-20 bg-slate-50" id="pricing">
+        <div className="max-w-4xl mx-auto px-4">
+          <div className="text-center mb-14">
+            <h2 className="text-3xl font-bold text-slate-900 mb-3">Pilihan Plan</h2>
+          </div>
+          <div className="flex justify-center">
+            <div className="w-8 h-8 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  if (!tiers.length) return null;
+
+  const features = [
+    { key: "customers", label: "pelanggan" },
+    { key: "payment_plans", label: "rencana pembayaran" },
+    { key: "schemes", label: "skema KPR" },
+    { key: "products", label: "produk" },
+    { key: "projects", label: "proyek" },
+    { key: "pdf_export", label: "Ekspor PDF" },
+    { key: "public_share", label: "Link skema publik" },
+  ];
+
+  return (
+    <section className="py-20 bg-slate-50" id="pricing">
+      <div className="max-w-4xl mx-auto px-4">
+        <div className="text-center mb-14">
+          <h2 className="text-3xl font-bold text-slate-900 mb-3">Pilihan Plan</h2>
+          <p className="text-slate-500">Mulai gratis. Upgrade kapan saja.</p>
+        </div>
+        <div className="grid md:grid-cols-2 gap-6">
+          {tiers.map((tier) => {
+            const isFree = tier.name === "free";
+            const isDark = !isFree;
+            return (
+              <div
+                key={tier.name}
+                className={`rounded-2xl p-8 border-2 shadow-lg relative ${
+                  isDark ? "bg-indigo-900 border-indigo-700" : "bg-white border-slate-200 shadow-sm"
+                }`}
+              >
+                {!isFree && (
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-amber-400 text-amber-900 text-xs font-bold px-4 py-1 rounded-full">
+                    POPULER
+                  </div>
+                )}
+
+                <div className={`text-sm font-semibold uppercase tracking-wide mb-2 ${isDark ? "text-indigo-300" : "text-slate-500"}`}>
+                  {tier.name.charAt(0).toUpperCase() + tier.name.slice(1)}
+                </div>
+
+                <div className={`text-4xl font-bold mb-1 ${isDark ? "text-white" : "text-slate-900"}`}>
+                  {formatPrice(tier.monthly_price)}
+                  <span className={`text-lg font-normal ${isDark ? "text-indigo-300" : "text-slate-400"}`}>/bulan</span>
+                </div>
+
+                <div className={`text-sm mb-6 ${isDark ? "text-indigo-300" : "text-slate-400"}`}>
+                  {Number(tier.yearly_price) > 0
+                    ? `atau ${formatPrice(tier.yearly_price)}/tahun`
+                    : "Selamanya gratis"}
+                </div>
+
+                <ul className="space-y-3 mb-8">
+                  {features.map(({ key, label }) => {
+                    const limit = tier.limits[key];
+                    const hasFeature = limit !== undefined;
+                    return (
+                      <li key={key} className={`flex items-center gap-2 text-sm ${isDark ? "text-indigo-100" : "text-slate-600"}`}>
+                        <span className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 text-xs ${isDark ? "bg-indigo-700 text-indigo-200" : "bg-green-100 text-green-600"}`}>
+                          {hasFeature ? "✓" : "—"}
+                        </span>
+                        {hasFeature ? `${limit} ${label}` : label}
+                      </li>
+                    );
+                  })}
+                </ul>
+
+                <Link
+                  href="/register"
+                  className={`block text-center px-6 py-3 font-semibold rounded-xl transition ${isDark ? "bg-amber-400 text-amber-900 hover:bg-amber-500" : "border-2 border-slate-300 text-slate-700 hover:bg-slate-50"}`}
+                >
+                  {isFree ? "Daftar Gratis" : "Daftar & Upgrade"}
+                </Link>
+              </div>
+            );
+          })}
+        </div>
+
+        <p className="text-center text-slate-400 text-xs mt-6">
+          Pembayaran premium dilakukan secara manual via transfer. Hubungi{" "}
+          <span className="font-medium text-slate-500">inetvmart@gmail.com</span>{" "}
+          atau Telegram untuk aktivasi.
+        </p>
+      </div>
+    </section>
+  );
+}
+
+// ─── Main Page ───────────────────────────────────────────────────
+
 export default function LandingPage() {
-  const router = useRouter();
   const [checking, setChecking] = useState(true);
   const [user, setUser] = useState<any>(null);
 
@@ -216,7 +351,7 @@ export default function LandingPage() {
               { title: "Berbagai Tipe Pembayaran", desc: "Booking fee, uang muka (DP), KPR, dan pelunasan. Masing-masing bisa dipecah jadi beberapa tahap." },
               { title: "Ekspor PDF Profesional", desc: "Tabel cicilan format A4 landscape, siap cetak dan berikan ke bank atau klien. Tanpa watermark." },
               { title: "Link Skema Publik", desc: "Bagikan skema ke bank KPR atau kolega dengan satu link. Tidak perlu akun untuk melihat." },
-              { title: "Multi-Produk & Multi-Proyek", desc: "Kelola beberapa proyek dan produk dalamsatu akun. Tidak terbatas pada satu developer." },
+              { title: "Multi-Produk & Multi-Proyek", desc: "Kelola beberapa proyek dan produk dalam satu akun. Tidak terbatas pada satu developer." },
               { title: "Batas Resource per Tier", desc: "Tier gratis: 2 entri per kategori. Upgrade ke premium untuk batas lebih besar." },
             ].map(({ title, desc }) => (
               <div key={title} className="bg-white rounded-xl p-5 border border-slate-100 shadow-sm hover:shadow-md transition">
@@ -231,92 +366,8 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Pricing */}
-      <section className="py-20 bg-slate-50" id="pricing">
-        <div className="max-w-4xl mx-auto px-4">
-          <div className="text-center mb-14">
-            <h2 className="text-3xl font-bold text-slate-900 mb-3">Pilihan Plan</h2>
-            <p className="text-slate-500">Mulai gratis. Upgrade kapan saja.</p>
-          </div>
-          <div className="grid md:grid-cols-2 gap-6">
-            {/* Free */}
-            <div className="bg-white rounded-2xl p-8 border-2 border-slate-200 shadow-sm">
-              <div className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-2">Free</div>
-              <div className="text-4xl font-bold text-slate-900 mb-1">Rp 0</div>
-              <div className="text-slate-400 text-sm mb-6">Selamanya gratis</div>
-              <ul className="space-y-3 mb-8">
-                {[
-                  "2 pelanggan",
-                  "2 rencana pembayaran",
-                  "2 skema KPR",
-                  "2 produk",
-                  "2 proyek",
-                  "Ekspor PDF",
-                  "Link skema publik",
-                ].map(item => (
-                  <li key={item} className="flex items-center gap-2 text-sm text-slate-600">
-                    <span className="w-5 h-5 bg-green-100 text-green-600 rounded-full flex items-center justify-center flex-shrink-0 text-xs">✓</span>
-                    {item}
-                  </li>
-                ))}
-              </ul>
-              <Link href="/register" className="block text-center px-6 py-3 border-2 border-slate-300 text-slate-700 font-semibold rounded-xl hover:bg-slate-50 transition">
-                Daftar Gratis
-              </Link>
-            </div>
-
-            {/* Premium */}
-            <div className="bg-indigo-900 rounded-2xl p-8 border-2 border-indigo-700 shadow-lg relative">
-              <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-amber-400 text-amber-900 text-xs font-bold px-4 py-1 rounded-full">
-                POPULER
-              </div>
-              <div className="text-sm font-semibold text-indigo-300 uppercase tracking-wide mb-2">Premium</div>
-              <div className="text-4xl font-bold text-white mb-1">Rp 150k<span className="text-lg font-normal text-indigo-300">/bulan</span></div>
-              <div className="text-indigo-300 text-sm mb-6">Hubungi webmaster untuk aktivasi</div>
-              <ul className="space-y-3 mb-8">
-                {[
-                  "10 pelanggan",
-                  "10 rencana pembayaran",
-                  "10 skema KPR",
-                  "10 produk",
-                  "10 proyek",
-                  "Ekspor PDF",
-                  "Link skema publik",
-                  "Prioritas support",
-                ].map(item => (
-                  <li key={item} className="flex items-center gap-2 text-sm text-indigo-100">
-                    <span className="w-5 h-5 bg-indigo-700 text-indigo-200 rounded-full flex items-center justify-center flex-shrink-0 text-xs">✓</span>
-                    {item}
-                  </li>
-                ))}
-              </ul>
-              <Link href="/register" className="block text-center px-6 py-3 bg-amber-400 text-amber-900 font-bold rounded-xl hover:bg-amber-500 transition">
-                Daftar &amp; Upgrade
-              </Link>
-            </div>
-          </div>
-          <p className="text-center text-slate-400 text-xs mt-6">
-            Pembayaran premium dilakukan secara manual via transfer. Hubungi{" "}
-            <span className="font-medium text-slate-500">inetvmart@gmail.com</span>{" "}
-            atau Telegram untuk aktivasi.
-          </p>
-        </div>
-      </section>
-
-      {/* CTA */}
-      <section className="py-20">
-        <div className="max-w-3xl mx-auto px-4 text-center">
-          <h2 className="text-3xl font-bold text-slate-900 mb-4">
-            Siap Mempermudah Workflow KPR Anda?
-          </h2>
-          <p className="text-slate-500 mb-8">
-            Daftar sekarang. Gratis. Tidak perlu kartu kredit.
-          </p>
-          <Link href="/register" className="inline-block px-8 py-4 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition shadow-lg shadow-indigo-200 text-lg">
-            Buat Akun Gratis →
-          </Link>
-        </div>
-      </section>
+      {/* Pricing — dynamic from API */}
+      <PricingSection />
 
       {/* Footer */}
       <footer className="border-t border-slate-100 py-10">
