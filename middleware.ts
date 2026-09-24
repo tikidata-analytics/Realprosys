@@ -13,6 +13,7 @@ const PUBLIC_PATHS = [
   "/api/auth/logout",
   "/share",
   "/api/share",
+  "/api/admin/migrations/add-user-memberships",
 ];
 
 export async function middleware(req: NextRequest) {
