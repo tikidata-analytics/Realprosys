@@ -140,7 +140,7 @@ function TierSection() {
       }
       await fetchTiers();
       setShowCreate(false);
-      setCreateForm({ name: "", monthly_price: "", yearly_price: "", start_date: "", end_date: "", is_active: true });
+      setCreateForm({ name: "", monthly_price: "", yearly_price: "", permanent: true, start_date: "", end_date: "", is_active: true });
     } catch (e: any) {
       setError(e.message);
     } finally {
@@ -202,12 +202,26 @@ function TierSection() {
                           className="w-28 border border-slate-300 rounded-lg px-2 py-1 text-sm" />
                       </td>
                       <td className="px-4 py-3 space-y-1">
-                        <input type="date" value={editForm.start_date ?? ""}
-                          onChange={(e) => setEditForm({ ...editForm, start_date: e.target.value || null })}
-                          className="w-32 border border-slate-300 rounded-lg px-2 py-1 text-xs" />
-                        <input type="date" value={editForm.end_date ?? ""}
-                          onChange={(e) => setEditForm({ ...editForm, end_date: e.target.value || null })}
-                          className="w-32 border border-slate-300 rounded-lg px-2 py-1 text-xs" />
+                        <label className="flex items-center gap-1.5 cursor-pointer mb-1">
+                          <input type="checkbox"
+                            checked={editForm.permanent ?? true}
+                            onChange={(e) => setEditForm({ ...editForm, permanent: e.target.checked })}
+                            className="rounded border-slate-300 text-indigo-600" />
+                          <span className="text-xs text-slate-600">Permanen</span>
+                        </label>
+                        {(editForm.permanent !== false) && (
+                          <div className="text-xs text-slate-400 italic pt-0.5">Tanggal tidak diperlukan</div>
+                        )}
+                        {editForm.permanent === false && (
+                          <>
+                            <input type="date" value={editForm.start_date ?? ""}
+                              onChange={(e) => setEditForm({ ...editForm, start_date: e.target.value || null })}
+                              className="w-32 border border-slate-300 rounded-lg px-2 py-1 text-xs" />
+                            <input type="date" value={editForm.end_date ?? ""}
+                              onChange={(e) => setEditForm({ ...editForm, end_date: e.target.value || null })}
+                              className="w-32 border border-slate-300 rounded-lg px-2 py-1 text-xs" />
+                          </>
+                        )}
                       </td>
                       <td className="px-4 py-3">
                         <label className="flex items-center gap-1.5 cursor-pointer">
@@ -238,8 +252,14 @@ function TierSection() {
                       </td>
                       <td className="px-4 py-3 text-center text-slate-700">{fmtPrice(t.monthly_price)}</td>
                       <td className="px-4 py-3 text-center text-slate-700">{fmtPrice(t.yearly_price)}</td>
-                      <td className="px-4 py-3 text-center text-xs text-slate-500">
-                        {fmtDate(t.start_date as string)} — {fmtDate(t.end_date as string)}
+                      <td className="px-4 py-3 text-center">
+                        {t.permanent ? (
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700">Permanen</span>
+                        ) : (
+                          <span className="text-xs text-slate-500">
+                            {fmtDate(t.start_date as string)} — {fmtDate(t.end_date as string)}
+                          </span>
+                        )}
                       </td>
                       <td className="px-4 py-3 text-center">
                         <span className={`text-xs px-2 py-0.5 rounded-full ${t.is_active ? "bg-green-100 text-green-700" : "bg-red-100 text-red-600"}`}>
@@ -299,20 +319,28 @@ function TierSection() {
                   className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-medium text-slate-500 mb-1">Tanggal Mulai</label>
-                <input type="date" value={createForm.start_date}
-                  onChange={(e) => setCreateForm({ ...createForm, start_date: e.target.value })}
-                  className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" checked={createForm.permanent}
+                onChange={(e) => setCreateForm({ ...createForm, permanent: e.target.checked })}
+                className="rounded border-slate-300 text-indigo-600" />
+              <span className="text-sm text-slate-700">Permanen — berlaku selamanya tanpa batasan tanggal</span>
+            </label>
+            {!createForm.permanent && (
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-slate-500 mb-1">Tanggal Mulai</label>
+                  <input type="date" value={createForm.start_date}
+                    onChange={(e) => setCreateForm({ ...createForm, start_date: e.target.value })}
+                    className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-500 mb-1">Tanggal Berakhir</label>
+                  <input type="date" value={createForm.end_date}
+                    onChange={(e) => setCreateForm({ ...createForm, end_date: e.target.value })}
+                    className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
+                </div>
               </div>
-              <div>
-                <label className="block text-xs font-medium text-slate-500 mb-1">Tanggal Berakhir</label>
-                <input type="date" value={createForm.end_date}
-                  onChange={(e) => setCreateForm({ ...createForm, end_date: e.target.value })}
-                  className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
-              </div>
-            </div>
+            )}
             <label className="flex items-center gap-2 cursor-pointer">
               <input type="checkbox" checked={createForm.is_active}
                 onChange={(e) => setCreateForm({ ...createForm, is_active: e.target.checked })}
