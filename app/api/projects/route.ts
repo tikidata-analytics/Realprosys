@@ -3,6 +3,7 @@ import pool from "@/lib/db";
 import { generateId } from "@/lib/auth";
 import { checkLimit, limitResponse } from "@/lib/limits";
 import { getUserIdFromRequest } from "@/lib/auth-api";
+import { getUserResourceLimit } from "@/lib/resource-limits";
 
 
 export async function GET(req: NextRequest) {
@@ -37,12 +38,17 @@ export async function GET(req: NextRequest) {
     const countResult = await pool.query(`SELECT COUNT(*) as total FROM projects WHERE ${whereClause}`, params);
     const total = parseInt(countResult.rows[0].total, 10);
 
+    const { limit } = await getUserResourceLimit(userId, "projects");
+
     const result = await pool.query(
-      `SELECT id, user_id, name, location, created_at FROM projects WHERE ${whereClause} ORDER BY ${safeOrderBy} ${safeOrderDir} LIMIT ${PAGE_SIZE} OFFSET ${offset}`,
+      `SELECT id, user_id, name, location, created_at FROM projects WHERE ${whereClause} ORDER BY created_at ASC LIMIT ${PAGE_SIZE} OFFSET ${offset}`,
       params
     );
 
-    return NextResponse.json({ rows: result.rows, total, page, pageSize: PAGE_SIZE, totalPages: Math.ceil(total / PAGE_SIZE) });
+    const locked = limit < Infinity;
+    const rows = result.rows.map((row, idx) => ({ ...row, _locked: locked && idx >= limit }));
+
+    return NextResponse.json({ rows, total, page, pageSize: PAGE_SIZE, totalPages: Math.ceil(total / PAGE_SIZE), limit });
   } catch (err) {
     console.error("GET /api/projects error:", err);
     return NextResponse.json({ error: "Failed" }, { status: 500 });

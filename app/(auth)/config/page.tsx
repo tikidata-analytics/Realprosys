@@ -827,23 +827,27 @@ function MembershipSection() {
                 <select value={form.duration_unit}
                   onChange={(e) => setForm({ ...form, duration_unit: e.target.value })}
                   className="border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500">
+                  <option value="days">Hari</option>
                   <option value="months">Bulan</option>
                   <option value="years">Tahun</option>
                 </select>
-                <span className="text-sm text-slate-500 self-center">× {form.duration_value} {form.duration_unit === "months" ? "bulan" : "tahun"}</span>
               </div>
               {form.duration_value && form.tier && (
-                <p className="text-xs text-slate-400 mt-1">
-                  Akan berakhir: {(() => {
-                    const start = form.start_date ? new Date(form.start_date) : new Date();
-                    const d = parseInt(form.duration_value);
-                    const end = new Date(start);
-                    if (form.duration_unit === "months") end.setMonth(end.getMonth() + d);
-                    else end.setFullYear(end.getFullYear() + d);
-                    end.setDate(end.getDate() - 1);
-                    return end.toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "numeric" });
-                  })()}
-                </p>
+                <div className="mt-2 px-3 py-2 bg-indigo-50 border border-indigo-200 rounded-lg">
+                  <p className="text-xs text-indigo-600 font-medium">Tanggal Expired:</p>
+                  <p className="text-sm font-semibold text-indigo-800">
+                    {(() => {
+                      const start = form.start_date ? new Date(form.start_date + "T00:00:00") : new Date();
+                      const d = parseInt(form.duration_value);
+                      const end = new Date(start);
+                      if (form.duration_unit === "days") end.setDate(end.getDate() + d);
+                      else if (form.duration_unit === "months") end.setMonth(end.getMonth() + d);
+                      else end.setFullYear(end.getFullYear() + d);
+                      end.setDate(end.getDate() - 1);
+                      return end.toLocaleDateString("id-ID", { weekday: "short", day: "2-digit", month: "short", year: "numeric" });
+                    })()}
+                  </p>
+                </div>
               )}
             </div>
 

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import pool from "@/lib/db";
 import { generateId } from "@/lib/auth";
 import { getUserIdFromRequest } from "@/lib/auth-api";
+import { isResourceLocked } from "@/lib/resource-limits";
 
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -29,6 +30,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   const userId = await getUserIdFromRequest(req);
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const { id } = await params;
+  if (await isResourceLocked(userId, "payment_plans", id)) return NextResponse.json({ error: "Row locked" }, { status: 403 });
   try {
     const { name, stages } = await req.json();
 
@@ -87,6 +89,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
   const userId = await getUserIdFromRequest(req);
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const { id } = await params;
+  if (await isResourceLocked(userId, "payment_plans", id)) return NextResponse.json({ error: "Row locked" }, { status: 403 });
   try {
     const result = await pool.query("DELETE FROM payment_plans WHERE id=$1 AND user_id=$2 RETURNING id", [id, userId]);
     if (result.rows.length === 0) return NextResponse.json({ error: "Not found" }, { status: 404 });

@@ -50,10 +50,12 @@ export async function POST(req: NextRequest) {
   // Compute end_date from duration if provided
   let computedEndDate = end_date || null;
   if (!computedEndDate && duration_value && duration_unit) {
-    const start = start_date ? new Date(start_date) : new Date();
-    if (duration_unit === "months") start.setMonth(start.getMonth() + parseInt(duration_value));
-    else if (duration_unit === "years") start.setFullYear(start.getFullYear() + parseInt(duration_value));
-    // Subtract 1 day so it ends at end of that day (e.g. 1 month from Jan 1 = Jan 31)
+    const start = start_date ? new Date(start_date + "T00:00:00") : new Date();
+    const d = parseInt(duration_value);
+    if (duration_unit === "days") start.setDate(start.getDate() + d);
+    else if (duration_unit === "months") start.setMonth(start.getMonth() + d);
+    else if (duration_unit === "years") start.setFullYear(start.getFullYear() + d);
+    // Subtract 1 day so it ends at end of that day (e.g. 1 day from Jan 1 = Jan 1 23:59)
     start.setDate(start.getDate() - 1);
     computedEndDate = start.toISOString().split("T")[0];
   }

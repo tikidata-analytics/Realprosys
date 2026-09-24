@@ -8,6 +8,7 @@ interface Project {
   name: string;
   location: string | null;
   created_at: string;
+  _locked?: boolean;
 }
 
 const PAGE_SIZE = 10;
@@ -179,8 +180,14 @@ export default function ProjectsPage() {
                     <td className="px-4 py-3 text-slate-500">{p.location || "-"}</td>
                     <td className="px-4 py-3 text-slate-500">{formatDate(p.created_at)}</td>
                     <td className="px-4 py-3 text-right">
-                      <button onClick={() => openEdit(p)} className="px-3 py-1 text-xs text-indigo-600 hover:bg-indigo-50 rounded-lg mr-1">Edit</button>
-                      <button onClick={() => handleDelete(p.id)} className="px-3 py-1 text-xs text-red-600 hover:bg-red-50 rounded-lg">Hapus</button>
+                      {p._locked ? (
+                        <span className="text-xs text-slate-400 italic">Terkunci</span>
+                      ) : (
+                        <>
+                          <button onClick={() => openEdit(p)} className="px-3 py-1 text-xs text-indigo-600 hover:bg-indigo-50 rounded-lg mr-1">Edit</button>
+                          <button onClick={() => handleDelete(p.id)} className="px-3 py-1 text-xs text-red-600 hover:bg-red-50 rounded-lg">Hapus</button>
+                        </>
+                      )}
                     </td>
                   </tr>
                 ))}

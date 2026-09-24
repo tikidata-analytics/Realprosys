@@ -3,6 +3,7 @@ import pool from "@/lib/db";
 import { generateId } from "@/lib/auth";
 import { checkLimit, limitResponse } from "@/lib/limits";
 import { getUserIdFromRequest } from "@/lib/auth-api";
+import { getUserResourceLimit } from "@/lib/resource-limits";
 
 export async function GET(req: NextRequest) {
   const userId = await getUserIdFromRequest(req);
@@ -43,21 +44,30 @@ export async function GET(req: NextRequest) {
     const total = parseInt(countResult.rows[0].total, 10);
 
     // Get rows
+    const { limit } = await getUserResourceLimit(userId, "customers");
+
     const result = await pool.query(
       `SELECT id, user_id, name, email, phone, birth_date, gender, created_at
        FROM customers
        WHERE ${whereClause}
-       ORDER BY ${safeOrderBy} ${safeOrderDir}
+       ORDER BY created_at ASC
        LIMIT ${PAGE_SIZE} OFFSET ${offset}`,
       params
     );
 
+    const locked = limit < Infinity;
+    const rows = result.rows.map((row, idx) => ({
+      ...row,
+      _locked: locked && idx >= limit,
+    }));
+
     return NextResponse.json({
-      rows: result.rows,
+      rows,
       total,
       page,
       pageSize: PAGE_SIZE,
       totalPages: Math.ceil(total / PAGE_SIZE),
+      limit,
     });
   } catch (err) {
     console.error("GET /api/customers error:", err);

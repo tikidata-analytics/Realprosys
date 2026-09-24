@@ -13,6 +13,7 @@ interface Scheme {
   payment_plan_name: string;
   booking_date: string;
   created_at: string;
+  _locked?: boolean;
 }
 
 export default function SchemesPage() {
@@ -146,8 +147,14 @@ export default function SchemesPage() {
                     <td className="px-4 py-3 text-slate-600">{s.payment_plan_name}</td>
                     <td className="px-4 py-3 text-slate-600">{formatDate(s.booking_date)}</td>
                     <td className="px-4 py-3 text-right">
-                      <button onClick={() => router.push(`/schemes/${s.id}`)} className="px-3 py-1 text-xs text-indigo-600 hover:bg-indigo-50 rounded-lg mr-1">Edit</button>
-                      <button onClick={() => handleDelete(s.id)} className="px-3 py-1 text-xs text-red-600 hover:bg-red-50 rounded-lg">Hapus</button>
+                      {s._locked ? (
+                        <span className="text-xs text-slate-400 italic">Terkunci</span>
+                      ) : (
+                        <>
+                          <button onClick={() => router.push(`/schemes/${s.id}`)} className="px-3 py-1 text-xs text-indigo-600 hover:bg-indigo-50 rounded-lg mr-1">Edit</button>
+                          <button onClick={() => handleDelete(s.id)} className="px-3 py-1 text-xs text-red-600 hover:bg-red-50 rounded-lg">Hapus</button>
+                        </>
+                      )}
                     </td>
                   </tr>
                 ))}

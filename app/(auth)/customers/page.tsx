@@ -12,6 +12,7 @@ interface Customer {
   birth_date: string | null;
   gender: string | null;
   created_at: string;
+  _locked?: boolean;
 }
 
 export default function CustomersPage() {
@@ -210,9 +211,15 @@ export default function CustomersPage() {
                     <td className="px-4 py-3 text-slate-500">{formatDate(c.birth_date)}</td>
                     <td className="px-4 py-3 text-slate-500">{formatDate(c.created_at)}</td>
                     <td className="px-4 py-3 text-right">
-                      <button onClick={() => router.push(`/schemes/new?customer_id=${c.id}`)} className="px-3 py-1 text-xs bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 mr-1">+ Skema</button>
-                      <button onClick={() => openEdit(c)} className="px-3 py-1 text-xs text-indigo-600 hover:bg-indigo-50 rounded-lg mr-1">Edit</button>
-                      <button onClick={() => handleDelete(c.id)} className="px-3 py-1 text-xs text-red-600 hover:bg-red-50 rounded-lg">Hapus</button>
+                      {c._locked ? (
+                        <span className="text-xs text-slate-400 italic">Terkunci</span>
+                      ) : (
+                        <>
+                          <button onClick={() => router.push(`/schemes/new?customer_id=${c.id}`)} className="px-3 py-1 text-xs bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 mr-1">+ Skema</button>
+                          <button onClick={() => openEdit(c)} className="px-3 py-1 text-xs text-indigo-600 hover:bg-indigo-50 rounded-lg mr-1">Edit</button>
+                          <button onClick={() => handleDelete(c.id)} className="px-3 py-1 text-xs text-red-600 hover:bg-red-50 rounded-lg">Hapus</button>
+                        </>
+                      )}
                     </td>
                   </tr>
                 ))}

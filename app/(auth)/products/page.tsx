@@ -21,6 +21,7 @@ interface Product {
   bedrooms: number | null;
   bathrooms: number | null;
   created_at: string;
+  _locked?: boolean;
 }
 
 const PAGE_SIZE = 10;
@@ -245,9 +246,15 @@ export default function ProductsPage() {
                     <td className="px-4 py-3 text-right text-slate-500">{p.building_area}/{p.land_area}</td>
                     <td className="px-4 py-3 text-right text-slate-500">{p.bedrooms}/{p.bathrooms}</td>
                     <td className="px-4 py-3 text-right">
-                      <button onClick={() => router.push(`/schemes/new?product_id=${p.id}`)} className="px-3 py-1 text-xs bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 mr-1">+ Skema</button>
-                      <button onClick={() => openEdit(p)} className="px-3 py-1 text-xs text-indigo-600 hover:bg-indigo-50 rounded-lg mr-1">Edit</button>
-                      <button onClick={() => handleDelete(p.id)} className="px-3 py-1 text-xs text-red-600 hover:bg-red-50 rounded-lg">Hapus</button>
+                      {p._locked ? (
+                        <span className="text-xs text-slate-400 italic">Terkunci</span>
+                      ) : (
+                        <>
+                          <button onClick={() => router.push(`/schemes/new?product_id=${p.id}`)} className="px-3 py-1 text-xs bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 mr-1">+ Skema</button>
+                          <button onClick={() => openEdit(p)} className="px-3 py-1 text-xs text-indigo-600 hover:bg-indigo-50 rounded-lg mr-1">Edit</button>
+                          <button onClick={() => handleDelete(p.id)} className="px-3 py-1 text-xs text-red-600 hover:bg-red-50 rounded-lg">Hapus</button>
+                        </>
+                      )}
                     </td>
                   </tr>
                 ))}

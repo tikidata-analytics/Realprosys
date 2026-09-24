@@ -3,6 +3,7 @@ import pool from "@/lib/db";
 import { generateId } from "@/lib/auth";
 import { checkLimit, limitResponse } from "@/lib/limits";
 import { getUserIdFromRequest } from "@/lib/auth-api";
+import { getUserResourceLimit } from "@/lib/resource-limits";
 
 
 export async function GET(req: NextRequest) {
@@ -43,7 +44,12 @@ export async function GET(req: NextRequest) {
        LIMIT $3 OFFSET $4`,
       [userId, `%${q}%`, pageSize, offset]
     );
-    return NextResponse.json({ rows: result.rows, total, page, pageSize, totalPages: Math.ceil(total / pageSize) });
+
+    const { limit } = await getUserResourceLimit(userId, "schemes");
+    const locked = limit < Infinity;
+    const rows = result.rows.map((row: any, idx: number) => ({ ...row, _locked: locked && idx >= limit }));
+
+    return NextResponse.json({ rows, total, page, pageSize, totalPages: Math.ceil(total / pageSize), limit });
   } catch { return NextResponse.json({ error: "Failed" }, { status: 500 }); }
 }
 

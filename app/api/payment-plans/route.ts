@@ -3,6 +3,7 @@ import pool from "@/lib/db";
 import { generateId } from "@/lib/auth";
 import { checkLimit, limitResponse } from "@/lib/limits";
 import { getUserIdFromRequest } from "@/lib/auth-api";
+import { getUserResourceLimit } from "@/lib/resource-limits";
 
 
 export async function GET(req: NextRequest) {
@@ -57,9 +58,12 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    const result = plans.rows.map((p) => ({ ...p, stages: stages[p.id] || [] }));
+    const { limit } = await getUserResourceLimit(userId, "payment_plans");
 
-    return NextResponse.json({ rows: result, total, page, pageSize: PAGE_SIZE, totalPages: Math.ceil(total / PAGE_SIZE) });
+    const locked = limit < Infinity;
+    const rows = plans.rows.map((p: any, idx: number) => ({ ...p, stages: stages[p.id] || [], _locked: locked && idx >= limit }));
+
+    return NextResponse.json({ rows, total, page, pageSize: PAGE_SIZE, totalPages: Math.ceil(total / PAGE_SIZE), limit });
   } catch (err) {
     console.error("GET /api/payment-plans error:", err);
     return NextResponse.json({ error: "Failed" }, { status: 500 });
