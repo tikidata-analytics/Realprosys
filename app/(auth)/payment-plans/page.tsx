@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { parseSort, toggleSort } from "@/lib/formatters";
 
 const STAGE_TYPES = [
@@ -22,6 +23,7 @@ function emptyStage() {
 }
 
 export default function PaymentPlansPage() {
+  const router = useRouter();
   const [plans, setPlans] = useState<any[]>([]);
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
@@ -392,6 +394,7 @@ export default function PaymentPlansPage() {
                       </div>
                     </td>
                     <td className="px-4 py-3 text-right">
+                      <button onClick={() => router.push(`/schemes/new?payment_plan_id=${p.id}`)} className="px-3 py-1 text-xs bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 mr-1">+ Skema</button>
                       <button onClick={() => startEdit(p)} className="px-3 py-1 text-xs text-indigo-600 hover:bg-indigo-50 rounded-lg mr-1">Edit</button>
                       <button onClick={() => handleDelete(p.id)} className="px-3 py-1 text-xs text-red-600 hover:bg-red-50 rounded-lg">Hapus</button>
                     </td>
