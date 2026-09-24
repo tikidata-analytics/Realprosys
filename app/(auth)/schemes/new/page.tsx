@@ -46,8 +46,26 @@ export default function NewSchemePage() {
   }, [searchParams]);
 
   const handlePreview = async () => {
-    if ((!showNewCustomer && !form.customer_id) || !form.product_id || !form.payment_plan_id || !form.booking_date) return;
-    if (showNewCustomer && !newCustomerName.trim()) return;
+    if (showNewCustomer && !newCustomerName.trim()) {
+      alert("Pilih atau masukkan nama pelanggan terlebih dahulu.");
+      return;
+    }
+    if (!showNewCustomer && !form.customer_id) {
+      alert("Pilih pelanggan terlebih dahulu.");
+      return;
+    }
+    if (!form.product_id) {
+      alert("Pilih produk terlebih dahulu.");
+      return;
+    }
+    if (!form.payment_plan_id) {
+      alert("Pilih rencana pembayaran terlebih dahulu.");
+      return;
+    }
+    if (!form.booking_date) {
+      alert("Pilih tanggal booking terlebih dahulu.");
+      return;
+    }
     setPreview(null);
 
     // Fetch plan directly to ensure fresh data
