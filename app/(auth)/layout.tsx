@@ -74,7 +74,6 @@ export default function ProtectedLayout({ children }: { children: React.ReactNod
             </nav>
 
             <div className="hidden md:flex items-center gap-3">
-              <span className="text-sm text-slate-600">{user?.name}</span>
               <Link href="/profile"
                 className="px-3 py-2 text-sm font-medium text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition">
                 Edit Profil
