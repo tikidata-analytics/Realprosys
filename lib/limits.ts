@@ -13,35 +13,38 @@ export async function checkLimit(
     return { allowed: true, current: 0, limit: Infinity };
   }
 
-  // Get user's tier
-  const userResult = await db.query(
-    "SELECT tier FROM users WHERE id = $1",
-    [userId]
+  // Get the user's active membership (most recent one currently in effect)
+  // Active = start_date <= today AND (end_date IS NULL OR end_date >= today)
+  const today = new Date().toISOString().split("T")[0];
+  const membershipRes = await db.query(
+    `SELECT tier FROM user_memberships
+     WHERE user_id = $1 AND start_date <= $2 AND (end_date IS NULL OR end_date >= $2)
+     ORDER BY start_date DESC LIMIT 1`,
+    [userId, today]
   );
-  if (!userResult.rows.length) return null;
-  const tier = userResult.rows[0].tier;
 
-  // Check tier is active and within date window
+  const activeTier = membershipRes.rows[0]?.tier || "free";
+
+  // Check tier is active and within its own date window
   const tierResult = await db.query(
-    "SELECT is_active, start_date, end_date FROM tiers WHERE name = $1",
-    [tier]
+    `SELECT is_active, start_date, end_date FROM tiers WHERE name = $1`,
+    [activeTier]
   );
   if (!tierResult.rows.length || !tierResult.rows[0].is_active) {
     return { allowed: false, current: 0, limit: 0 };
   }
   const { start_date, end_date } = tierResult.rows[0];
-  const now = new Date();
-  if (start_date && new Date(start_date) > now) {
+  if (start_date && new Date(start_date) > new Date()) {
     return { allowed: false, current: 0, limit: 0 }; // tier not yet started
   }
-  if (end_date && new Date(end_date) < now) {
+  if (end_date && new Date(end_date) < new Date()) {
     return { allowed: false, current: 0, limit: 0 }; // tier expired
   }
 
   // Get limit for tier + resource
   const limitResult = await db.query(
-    "SELECT limit_val FROM tier_limits WHERE tier = $1 AND resource = $2",
-    [tier, resource]
+    `SELECT limit_val FROM tier_limits WHERE tier = $1 AND resource = $2`,
+    [activeTier, resource]
   );
   const limit = limitResult.rows[0]?.limit_val ?? 0;
 

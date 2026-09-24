@@ -666,6 +666,241 @@ interface HistoryRow {
   changed_at: string;
 }
 
+// ─── Membership section ─────────────────────────────────────────
+
+interface MembershipRow {
+  id: string;
+  user_id: string;
+  tier: string;
+  start_date: string;
+  end_date: string;
+  created_at: string;
+  email: string;
+  username: string;
+  user_name: string;
+}
+
+function MembershipSection() {
+  const [rows, setRows] = useState<MembershipRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [showForm, setShowForm] = useState(false);
+  const [userSearch, setUserSearch] = useState("");
+  const [userResults, setUserResults] = useState<any[]>([]);
+  const [selectedUser, setSelectedUser] = useState<any>(null);
+  const [tiers, setTiers] = useState<{ name: string }[]>([]);
+  const [form, setForm] = useState({ tier: "", start_date: "", duration_value: "", duration_unit: "months" });
+  const [saving, setSaving] = useState(false);
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+
+  const fetchMemberships = () => {
+    setLoading(true);
+    fetch(`/api/config/memberships?page=${page}`)
+      .then((r) => r.json())
+      .then((d) => { setRows(d.rows || []); setTotal(d.total || 0); setLoading(false); })
+      .catch(() => { setError("Gagal memuat."); setLoading(false); });
+  };
+
+  const fetchTiers = () => {
+    fetch("/api/config/tiers")
+      .then((r) => r.json())
+      .then((d) => setTiers(d.map((t: any) => ({ name: t.name }))))
+      .catch(console.error);
+  };
+
+  useEffect(() => { fetchMemberships(); fetchTiers(); }, [page]);
+
+  const searchUsers = (q: string) => {
+    setUserSearch(q);
+    if (q.length < 2) { setUserResults([]); return; }
+    fetch(`/api/config/users?q=${encodeURIComponent(q)}`)
+      .then((r) => r.json())
+      .then((d) => setUserResults(d || []))
+      .catch(console.error);
+  };
+
+  const handleCreate = async () => {
+    if (!selectedUser) { alert("Pilih user terlebih dahulu."); return; }
+    if (!form.tier) { alert("Pilih tier."); return; }
+    setSaving(true);
+    setError("");
+    try {
+      const res = await fetch("/api/config/memberships", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          user_id: selectedUser.id,
+          tier: form.tier,
+          start_date: form.start_date || undefined,
+          duration_value: form.duration_value || undefined,
+          duration_unit: form.duration_unit,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setShowForm(false);
+      setSelectedUser(null);
+      setUserSearch("");
+      setUserResults([]);
+      setForm({ tier: "", start_date: "", duration_value: "", duration_unit: "months" });
+      setPage(1);
+      fetchMemberships();
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("Cabut membership ini?")) return;
+    try {
+      const res = await fetch(`/api/config/memberships/${id}`, { method: "DELETE" });
+      if (!res.ok) { const d = await res.json(); throw new Error(d.error); }
+      fetchMemberships();
+    } catch (e: any) { alert(e.message); }
+  };
+
+  const fmtDate = (d: string | null) => d ? new Date(d).toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "numeric" }) : "—";
+
+  return (
+    <div className="space-y-4">
+      <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+        <div className="px-4 py-3 border-b border-slate-200 flex justify-between items-center">
+          <p className="text-sm text-slate-500">Kelola membership user — assign tier dengan periode berlaku.</p>
+          <button onClick={() => { setShowForm(!showForm); setError(""); }}
+            className="px-4 py-2 bg-indigo-600 text-white text-sm rounded-lg hover:bg-indigo-700">
+            {showForm ? "Batal" : "+ Assign Membership"}
+          </button>
+        </div>
+
+        {showForm && (
+          <div className="p-4 border-b border-slate-200 space-y-3 bg-slate-50">
+            <p className="text-sm font-medium text-slate-700">Assign Membership Baru</p>
+
+            {/* User search */}
+            <div>
+              <label className="block text-xs font-medium text-slate-500 mb-1">Cari User (email atau username)</label>
+              <input type="text" placeholder="Ketik min. 2 karakter..."
+                value={userSearch} onChange={(e) => { setUserSearch(e.target.value); setSelectedUser(null); searchUsers(e.target.value); }}
+                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500" />
+              {userResults.length > 0 && !selectedUser && (
+                <div className="border border-slate-200 rounded-lg mt-1 bg-white shadow-sm max-h-40 overflow-y-auto">
+                  {userResults.map((u) => (
+                    <button key={u.id} onClick={() => { setSelectedUser(u); setUserSearch(u.email); setUserResults([]); }}
+                      className="w-full text-left px-3 py-2 text-sm hover:bg-indigo-50 border-b border-slate-100 last:border-0">
+                      <span className="font-medium">{u.email}</span>
+                      <span className="text-slate-400 ml-2">{u.username !== u.email ? `(@${u.username})` : ""}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+              {selectedUser && <p className="text-xs text-green-600 mt-1">✓ {selectedUser.email} dipilih</p>}
+            </div>
+
+            {/* Tier */}
+            <div>
+              <label className="block text-xs font-medium text-slate-500 mb-1">Tier</label>
+              <select value={form.tier} onChange={(e) => setForm({ ...form, tier: e.target.value })}
+                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500">
+                <option value="">Pilih tier...</option>
+                {tiers.map((t) => <option key={t.name} value={t.name}>{t.name.charAt(0).toUpperCase() + t.name.slice(1)}</option>)}
+              </select>
+            </div>
+
+            {/* Start date */}
+            <div>
+              <label className="block text-xs font-medium text-slate-500 mb-1">Tanggal Mulai (kosong = hari ini)</label>
+              <input type="date" value={form.start_date}
+                onChange={(e) => setForm({ ...form, start_date: e.target.value })}
+                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500" />
+            </div>
+
+            {/* Duration */}
+            <div>
+              <label className="block text-xs font-medium text-slate-500 mb-1">Durasi Berlangganan</label>
+              <div className="flex gap-2">
+                <input type="number" min="1" placeholder="1" value={form.duration_value}
+                  onChange={(e) => setForm({ ...form, duration_value: e.target.value })}
+                  className="w-24 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500" />
+                <select value={form.duration_unit}
+                  onChange={(e) => setForm({ ...form, duration_unit: e.target.value })}
+                  className="border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500">
+                  <option value="months">Bulan</option>
+                  <option value="years">Tahun</option>
+                </select>
+                <span className="text-sm text-slate-500 self-center">× {form.duration_value} {form.duration_unit === "months" ? "bulan" : "tahun"}</span>
+              </div>
+              {form.duration_value && form.tier && (
+                <p className="text-xs text-slate-400 mt-1">
+                  Akan berakhir: {(() => {
+                    const start = form.start_date ? new Date(form.start_date) : new Date();
+                    const d = parseInt(form.duration_value);
+                    const end = new Date(start);
+                    if (form.duration_unit === "months") end.setMonth(end.getMonth() + d);
+                    else end.setFullYear(end.getFullYear() + d);
+                    end.setDate(end.getDate() - 1);
+                    return end.toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "numeric" });
+                  })()}
+                </p>
+              )}
+            </div>
+
+            {error && <p className="text-sm text-red-600">{error}</p>}
+
+            <button onClick={handleCreate} disabled={saving}
+              className="px-4 py-2 bg-indigo-600 text-white text-sm rounded-lg hover:bg-indigo-700 disabled:opacity-50">
+              {saving ? "Menyimpan..." : "Simpan Membership"}
+            </button>
+          </div>
+        )}
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-slate-50 border-b border-slate-200">
+              <tr>
+                <th className="text-left px-4 py-3 font-medium text-slate-600">User</th>
+                <th className="text-center px-4 py-3 font-medium text-slate-600">Tier</th>
+                <th className="text-center px-4 py-3 font-medium text-slate-600">Mulai</th>
+                <th className="text-center px-4 py-3 font-medium text-slate-600">Berakhir</th>
+                <th className="text-right px-4 py-3 font-medium text-slate-600">Aksi</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {loading ? <tr><td colSpan={5} className="px-4 py-6 text-center text-slate-400">Memuat...</td></tr> :
+               rows.length === 0 ? <tr><td colSpan={5} className="px-4 py-6 text-center text-slate-400">Belum ada membership.</td></tr> :
+               rows.map((m) => (
+                <tr key={m.id} className="hover:bg-slate-50">
+                  <td className="px-4 py-3">
+                    <div className="font-medium text-slate-800">{m.email}</div>
+                    {m.user_name && <div className="text-xs text-slate-400">{m.user_name}</div>}
+                  </td>
+                  <td className="px-4 py-3 text-center">
+                    <span className="px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded-full text-xs font-medium">
+                      {m.tier.charAt(0).toUpperCase() + m.tier.slice(1)}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-center text-slate-600">{fmtDate(m.start_date)}</td>
+                  <td className="px-4 py-3 text-center text-slate-600">{fmtDate(m.end_date)}</td>
+                  <td className="px-4 py-3 text-right">
+                    <button onClick={() => handleDelete(m.id)}
+                      className="px-3 py-1 text-xs text-red-600 hover:bg-red-50 rounded-lg">Cabut</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="px-4 py-3 border-t border-slate-200 text-sm text-slate-500 text-center">
+          Total: {total} membership
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function TierHistorySection() {
   const [rows, setRows] = useState<HistoryRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -757,7 +992,7 @@ function TierHistorySection() {
 
 export default function ConfigPage() {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<"tiers" | "limits" | "users" | "history">("tiers");
+  const [activeTab, setActiveTab] = useState<"tiers" | "limits" | "memberships" | "users" | "history">("tiers");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -786,16 +1021,17 @@ export default function ConfigPage() {
       </div>
 
       <div className="flex gap-1 mb-6 border-b border-slate-200">
-        {(["tiers", "limits", "users", "history"] as const).map((tab) => (
+        {(["tiers", "limits", "memberships", "users", "history"] as const).map((tab) => (
           <button key={tab} onClick={() => setActiveTab(tab)}
             className={`px-4 py-2 text-sm font-medium border-b-2 transition ${activeTab === tab ? "border-indigo-600 text-indigo-600" : "border-transparent text-slate-500 hover:text-slate-700"}`}>
-            {tab === "tiers" ? "Tier" : tab === "limits" ? "Tier Limits" : tab === "users" ? "Manajemen User" : "Riwayat Tier"}
+            {tab === "tiers" ? "Tier" : tab === "limits" ? "Tier Limits" : tab === "memberships" ? "Membership" : tab === "users" ? "Manajemen User" : "Riwayat Tier"}
           </button>
         ))}
       </div>
 
       {activeTab === "tiers" ? <TierSection /> :
        activeTab === "limits" ? <LimitsSection /> :
+       activeTab === "memberships" ? <MembershipSection /> :
        activeTab === "users" ? <UserManagementSection /> :
        <TierHistorySection />}
     </div>
