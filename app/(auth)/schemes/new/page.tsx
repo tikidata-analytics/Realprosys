@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { formatCurrency, formatDate } from "@/lib/formatters";
 import DatePicker from "@/components/DatePicker";
 import KprChart from "@/components/KprChart";
+import SearchableSelect from "@/components/SearchableSelect";
 
 export default function NewSchemePage() {
   const router = useRouter();
@@ -272,28 +273,27 @@ export default function NewSchemePage() {
         <div className="bg-white rounded-xl shadow-sm p-6 space-y-4">
           <h3 className="font-semibold text-slate-800">Pilih Data</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Pelanggan <span className="text-red-500">*</span></label>
-              <div className="flex gap-2">
-                <select
-                  value={showNewCustomer ? "NEW" : form.customer_id}
-                  onChange={(e) => {
-                    if (e.target.value === "NEW") {
-                      setShowNewCustomer(true);
-                      setForm({ ...form, customer_id: "" });
-                    } else {
-                      setShowNewCustomer(false);
-                      setForm({ ...form, customer_id: e.target.value });
-                    }
-                  }}
-                  required
-                  className="flex-1 px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-                >
-                  <option value="">Pilih...</option>
-                  <option value="NEW">+ Tambah Baru</option>
-                  {customers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </select>
-              </div>
+            {/* Pelanggan */}
+            <div className="relative">
+              <SearchableSelect
+                label="Pelanggan"
+                options={[
+                  { value: "__NEW__", label: "+ Tambah Baru" },
+                  ...customers.map((c) => ({ value: c.id, label: c.name })),
+                ]}
+                value={showNewCustomer ? "__NEW__" : form.customer_id}
+                onChange={(val) => {
+                  if (val === "__NEW__") {
+                    setShowNewCustomer(true);
+                    setForm({ ...form, customer_id: "" });
+                  } else {
+                    setShowNewCustomer(false);
+                    setForm({ ...form, customer_id: val });
+                  }
+                }}
+                placeholder="Cari pelanggan..."
+                required
+              />
               {showNewCustomer && (
                 <input
                   type="text"
@@ -305,22 +305,26 @@ export default function NewSchemePage() {
                 />
               )}
             </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Produk <span className="text-red-500">*</span></label>
-              <select value={form.product_id} onChange={(e) => { setForm({ ...form, product_id: e.target.value }); setPreview(null); }} required
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
-                <option value="">Pilih...</option>
-                {products.map((p) => <option key={p.id} value={p.id}>{p.name} - {formatCurrency(p.price)}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Rencana Pembayaran <span className="text-red-500">*</span></label>
-              <select value={form.payment_plan_id} onChange={(e) => { setForm({ ...form, payment_plan_id: e.target.value }); setPreview(null); }} required
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
-                <option value="">Pilih...</option>
-                {paymentPlans.map((pp) => <option key={pp.id} value={pp.id}>{pp.name}</option>)}
-              </select>
-            </div>
+
+            {/* Produk */}
+            <SearchableSelect
+              label="Produk"
+              options={products.map((p) => ({ value: p.id, label: `${p.name} - ${formatCurrency(p.price)}` }))}
+              value={form.product_id}
+              onChange={(val) => { setForm({ ...form, product_id: val }); setPreview(null); }}
+              placeholder="Cari produk..."
+              required
+            />
+
+            {/* Rencana Pembayaran */}
+            <SearchableSelect
+              label="Rencana Pembayaran"
+              options={paymentPlans.map((pp) => ({ value: pp.id, label: pp.name }))}
+              value={form.payment_plan_id}
+              onChange={(val) => { setForm({ ...form, payment_plan_id: val }); setPreview(null); }}
+              placeholder="Cari rencana..."
+              required
+            />
           </div>
 
           {(selectedProduct || selectedPlan) && (
