@@ -8,17 +8,42 @@ import { getUserIdFromRequest } from "@/lib/auth-api";
 export async function GET(req: NextRequest) {
   const userId = await getUserIdFromRequest(req);
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const { searchParams } = req.nextUrl;
+  const q = searchParams.get("q") || "";
+  const page = Math.max(1, parseInt(searchParams.get("page") || "1"));
+  const sort = searchParams.get("sort") || "created_at:desc";
+  const pageSize = 10;
+
+  const [orderBy, orderDir] = sort.split(":");
+  const allowedSorts = ["name", "created_at", "booking_date", "customer_name", "product_name", "payment_plan_name"];
+  const safeOrderBy = allowedSorts.includes(orderBy) ? orderBy : "created_at";
+  const safeOrderDir = orderDir === "asc" ? "ASC" : "DESC";
+  const offset = (page - 1) * pageSize;
+
   try {
+    const countResult = await pool.query(
+      `SELECT COUNT(*) as total FROM schemes s
+       JOIN customers c ON s.customer_id = c.id
+       JOIN products p ON s.product_id = p.id
+       JOIN payment_plans pp ON s.payment_plan_id = pp.id
+       WHERE s.user_id = $1 AND s.name ILIKE $2`,
+      [userId, `%${q}%`]
+    );
+    const total = parseInt(countResult.rows[0].total);
+
     const result = await pool.query(
       `SELECT s.*, c.name as customer_name, p.name as product_name, pp.name as payment_plan_name
        FROM schemes s
        JOIN customers c ON s.customer_id = c.id
        JOIN products p ON s.product_id = p.id
        JOIN payment_plans pp ON s.payment_plan_id = pp.id
-       WHERE s.user_id = $1 ORDER BY s.created_at DESC`,
-      [userId]
+       WHERE s.user_id = $1 AND s.name ILIKE $2
+       ORDER BY s.${safeOrderBy} ${safeOrderDir}
+       LIMIT $3 OFFSET $4`,
+      [userId, `%${q}%`, pageSize, offset]
     );
-    return NextResponse.json(result.rows);
+    return NextResponse.json({ rows: result.rows, total, page, pageSize, totalPages: Math.ceil(total / pageSize) });
   } catch { return NextResponse.json({ error: "Failed" }, { status: 500 }); }
 }
 
