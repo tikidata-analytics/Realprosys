@@ -2,18 +2,18 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 export default function LandingPage() {
+  const router = useRouter();
   const [checking, setChecking] = useState(true);
+  const [user, setUser] = useState<any>(null);
 
   useEffect(() => {
     fetch("/api/auth/me")
       .then((r) => r.json())
       .then((d) => {
-        if (!d.user) {
-          // not logged in — show landing page as-is
-        }
-        // if logged in: stay on homepage, server nav shows dashboard link
+        setUser(d.user || null);
       })
       .catch(() => {})
       .finally(() => setChecking(false));
@@ -38,12 +38,20 @@ export default function LandingPage() {
             <span className="ml-2 text-sm text-slate-400 hidden sm:inline">KPR Scheme Generator</span>
           </div>
           <nav className="flex items-center gap-3">
-            <Link href="/login" className="text-sm font-medium text-slate-600 hover:text-indigo-600 transition">
-              Masuk
-            </Link>
-            <Link href="/register" className="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition">
-              Daftar Gratis
-            </Link>
+            {user ? (
+              <Link href="/dashboard" className="text-sm font-medium text-slate-600 hover:text-indigo-600 transition">
+                Dashboard
+              </Link>
+            ) : (
+              <Link href="/login" className="text-sm font-medium text-slate-600 hover:text-indigo-600 transition">
+                Masuk
+              </Link>
+            )}
+            {!user && (
+              <Link href="/register" className="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition">
+                Daftar Gratis
+              </Link>
+            )}
           </nav>
         </div>
       </header>
