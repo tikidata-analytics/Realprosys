@@ -12,20 +12,27 @@ interface Stats {
 
 export default function DashboardPage() {
   const [stats, setStats] = useState<Stats | null>(null);
+  const [userName, setUserName] = useState("");
 
   useEffect(() => {
+    fetch("/api/auth/me")
+      .then((r) => r.json())
+      .then((d) => setUserName(d.user?.name || d.user?.username || ""))
+      .catch(() => {});
     fetch("/api/stats")
       .then((r) => r.json())
       .then((data) => setStats(data))
       .catch(console.error);
   }, []);
 
+  const greeting = userName ? `Selamat datang, ${userName}!` : "Selamat datang di Realprosys";
+
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold text-slate-900">Dashboard</h2>
-          <p className="text-slate-500 mt-1">Selamat datang di Realprosys</p>
+          <p className="text-slate-500 mt-1">{greeting}</p>
         </div>
         <a href="/profile" className="text-sm text-indigo-600 hover:text-indigo-800 font-medium">
           Edit Profil
