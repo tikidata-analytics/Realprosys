@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ user: null, revoked: true }, { status: 401 });
     }
     // Use effective tier from membership (not static users.tier)
-    const effectiveTier = await getEffectiveTier(userId);
+    const effectiveTier = await getEffectiveTier(userId!);
     return NextResponse.json({ user: { id: user.id, email: user.email, name: user.name, role: user.role, tier: effectiveTier } });
   } catch {
     return NextResponse.json({ user: null }, { status: 500 });

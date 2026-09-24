@@ -830,11 +830,73 @@ function TierHistorySection() {
   );
 }
 
+// ─── Settings section ─────────────────────────────────────────────
+
+function SettingsSection() {
+  const [waNumber, setWaNumber] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState("");
+
+  useEffect(() => {
+    fetch("/api/admin/settings")
+      .then((r) => r.json())
+      .then((d) => setWaNumber(d.settings?.admin_wa || ""))
+      .catch(() => {});
+  }, []);
+
+  const handleSave = async () => {
+    setSaving(true);
+    setSaved("");
+    try {
+      await fetch("/api/admin/settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key: "admin_wa", value: waNumber }),
+      });
+      setSaved("Disimpan!");
+      setTimeout(() => setSaved(""), 2000);
+    } catch {
+      setSaved("Gagal menyimpan.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="bg-white rounded-xl shadow-sm p-6">
+      <h3 className="font-semibold text-slate-800 mb-4">Pengaturan Aplikasi</h3>
+      <div className="max-w-sm space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1">Nomor WhatsApp Admin</label>
+          <p className="text-xs text-slate-400 mb-2">Nomor，用于接收 upgrade request via WhatsApp. Format: 628xxxxxxxxxx</p>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={waNumber}
+              onChange={(e) => setWaNumber(e.target.value.replace(/\D/g, ""))}
+              placeholder="628155xxxxxxx"
+              className="flex-1 px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+            />
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              className="px-4 py-2 bg-indigo-600 text-white text-sm rounded-lg hover:bg-indigo-700 disabled:opacity-50"
+            >
+              {saving ? "Menyimpan..." : "Simpan"}
+            </button>
+          </div>
+          {saved && <p className={`text-xs mt-1 ${saved === "Disimpan!" ? "text-green-600" : "text-red-500"}`}>{saved}</p>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Main page ───────────────────────────────────────────────────
 
 export default function ConfigPage() {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<"tiers" | "limits" | "memberships" | "history">("tiers");
+  const [activeTab, setActiveTab] = useState<"tiers" | "limits" | "memberships" | "history" | "settings">("tiers");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -863,10 +925,10 @@ export default function ConfigPage() {
       </div>
 
       <div className="flex gap-1 mb-6 border-b border-slate-200">
-        {(["tiers", "limits", "memberships", "history"] as const).map((tab) => (
+        {(["tiers", "limits", "memberships", "history", "settings"] as const).map((tab) => (
           <button key={tab} onClick={() => setActiveTab(tab)}
             className={`px-4 py-2 text-sm font-medium border-b-2 transition ${activeTab === tab ? "border-indigo-600 text-indigo-600" : "border-transparent text-slate-500 hover:text-slate-700"}`}>
-            {tab === "tiers" ? "Tier" : tab === "limits" ? "Tier Limits" : tab === "memberships" ? "Membership" : "Riwayat Tier"}
+            {tab === "tiers" ? "Tier" : tab === "limits" ? "Tier Limits" : tab === "memberships" ? "Membership" : tab === "history" ? "Riwayat Tier" : "Settings"}
           </button>
         ))}
       </div>
@@ -874,7 +936,8 @@ export default function ConfigPage() {
       {activeTab === "tiers" ? <TierSection /> :
        activeTab === "limits" ? <LimitsSection /> :
        activeTab === "memberships" ? <MembershipSection /> :
-       <TierHistorySection />}
+       activeTab === "history" ? <TierHistorySection /> :
+       <SettingsSection />}
     </div>
   );
 }

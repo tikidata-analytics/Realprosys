@@ -14,7 +14,7 @@ interface Tier {
   limits: Record<string, number>;
 }
 
-const ADMIN_WA = "628155XXXXXXX"; // Replace with actual admin WhatsApp number
+const ADMIN_WA_FALLBACK = "628155XXXXXXX"; // Replace with actual; loaded from /api/public/admin-wa
 
 export default function UpgradePage() {
   const router = useRouter();
@@ -26,7 +26,7 @@ export default function UpgradePage() {
   const [transferDate, setTransferDate] = useState("");
   const [nominal, setNominal] = useState("");
   const [name, setName] = useState("");
-  const [showWA, setShowWA] = useState(false);
+  const [adminWa, setAdminWa] = useState(ADMIN_WA_FALLBACK);
 
   useEffect(() => {
     // Check if already logged in and get user info
@@ -51,6 +51,11 @@ export default function UpgradePage() {
         setLoading(false);
       })
       .catch(() => setLoading(false));
+
+    fetch("/api/public/admin-wa")
+      .then((r) => r.json())
+      .then((d) => { if (d.admin_wa) setAdminWa(d.admin_wa); })
+      .catch(() => {});
   }, [router]);
 
   const selectedTierData = tiers.find((t) => t.name === selectedTier);
@@ -67,7 +72,7 @@ export default function UpgradePage() {
     ? `Halo Admin Realprosys,%0A%0ASaya ingin upgrade akun:%0A- Email: ${userEmail}%0A- Nama: ${name}%0A- Tier: ${selectedTierData.name} (${durationLabel})%0A- Harga: ${priceFormatted}%0A- Tanggal Transfer: ${transferDate}%0A- Nominal: ${nominal}%0A%0AMohon bantu aktivasi membership. Terima kasih!`
     : "";
 
-  const waUrl = `https://wa.me/${ADMIN_WA}?text=${waMessage}`;
+  const waUrl = `https://wa.me/${adminWa}?text=${waMessage}`;
 
   if (loading) {
     return (
@@ -98,7 +103,7 @@ export default function UpgradePage() {
                 {tiers.map((tier) => (
                   <button
                     key={tier.name}
-                    onClick={() => { setSelectedTier(tier.name); setShowWA(false); }}
+                    onClick={() => setSelectedTier(tier.name)}
                     className={`p-4 rounded-xl border-2 text-left transition ${
                       selectedTier === tier.name
                         ? "border-indigo-600 bg-indigo-50"
