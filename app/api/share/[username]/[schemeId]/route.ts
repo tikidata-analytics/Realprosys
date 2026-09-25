@@ -22,7 +22,7 @@ export async function GET(
     const schemes = await pool.query(
       `SELECT s.id, s.name, s.booking_date, s.schedule,
               c.name as customer_name,
-              p.name as product_name, p.price,
+              p.name as product_name, p.price, p.land_area, p.building_area,
               pr.name as project_name,
               u.username
        FROM schemes s

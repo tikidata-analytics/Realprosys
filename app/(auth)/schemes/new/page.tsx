@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { formatCurrency, formatDate } from "@/lib/formatters";
+import { formatCurrency, formatDate, formatLandArea } from "@/lib/formatters";
 import DatePicker from "@/components/DatePicker";
 import KprChart from "@/components/KprChart";
 import SearchableSelect from "@/components/SearchableSelect";
@@ -360,11 +360,12 @@ export default function NewSchemePage() {
             </div>
 
             {/* Info header */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-3 text-sm">
               {[
                 { label: "Pelanggan", value: preview.customerName || "-" },
                 { label: "Proyek", value: preview.projectName || "-" },
                 { label: "Produk", value: preview.productName || "-" },
+                { label: "Luas", value: formatLandArea(selectedProduct?.land_area, selectedProduct?.building_area) },
                 { label: "Harga Rumah", value: formatCurrency(preview.housePrice) },
               ].map(({ label, value }) => (
                 <div key={label} className="bg-white rounded-lg px-3 py-2">

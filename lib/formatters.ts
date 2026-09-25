@@ -33,3 +33,9 @@ export function toggleSort(current: string, field: string): string {
   if (orderBy !== field) return `${field}:asc`;
   return orderDir === "asc" ? `${field}:desc` : `${field}:asc`;
 }
+
+export function formatLandArea(land: number | null | undefined, building: number | null | undefined): string {
+  const lb = land != null ? `${land}m²` : "-";
+  const bt = building != null ? `${building}m²` : "-";
+  return `${bt} / ${lb}`;
+}

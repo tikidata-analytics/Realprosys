@@ -11,6 +11,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   try {
     const result = await pool.query(
       `SELECT s.*, c.name as customer_name, p.name as product_name, p.type as product_type, p.price as product_price,
+              p.land_area, p.building_area,
               pr.name as project_name,
               pp.name as payment_plan_name,
               u.username

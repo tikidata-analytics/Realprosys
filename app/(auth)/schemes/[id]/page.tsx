@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useParams } from "next/navigation";
 import KprChart from "@/components/KprChart";
 import { downloadPdf, SchemePdfDocument } from "@/components/SchemePdfDocument";
 import { pdf } from "@react-pdf/renderer";
+import { formatLandArea } from "@/lib/formatters";
 
 function formatCurrency(val: number) {
   return Number(val || 0).toLocaleString("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 });
@@ -16,6 +17,35 @@ export default function SchemeDetailPage() {
   const [shareToken, setShareToken] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [pdfLoading, setPdfLoading] = useState(false);
+  const [editingName, setEditingName] = useState(false);
+  const [nameInput, setNameInput] = useState("");
+  const nameInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (editingName && nameInputRef.current) {
+      nameInputRef.current.focus();
+      nameInputRef.current.select();
+    }
+  }, [editingName]);
+
+  const startEditingName = () => {
+    setNameInput(s.name);
+    setEditingName(true);
+  };
+
+  const saveName = async () => {
+    const newName = nameInput.trim();
+    if (!newName || newName === s.name) { setEditingName(false); return; }
+    const res = await fetch(`/api/schemes/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: newName }),
+    });
+    if (res.ok) {
+      setScheme((prev: any) => ({ ...prev, name: newName }));
+    }
+    setEditingName(false);
+  };
 
   useEffect(() => {
     if (!id) return;
@@ -118,7 +148,19 @@ export default function SchemeDetailPage() {
     <div>
       <div className="flex items-center gap-3 mb-6">
         <a href="/schemes" className="text-slate-400 hover:text-slate-600">← Skema</a>
-        <h2 className="text-xl font-bold text-slate-900">{s.name}</h2>
+        {editingName ? (
+          <input
+            ref={nameInputRef}
+            type="text"
+            value={nameInput}
+            onChange={(e) => setNameInput(e.target.value)}
+            onBlur={saveName}
+            onKeyDown={(e) => { if (e.key === "Enter") saveName(); if (e.key === "Escape") setEditingName(false); }}
+            className="text-xl font-bold text-slate-900 border border-indigo-300 rounded px-2 py-0.5 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          />
+        ) : (
+          <h2 className="text-xl font-bold text-slate-900 cursor-pointer hover:text-indigo-600" onClick={startEditingName} title="Klik untuk edit nama">✏️ {s.name}</h2>
+        )}
       </div>
 
       {/* Summary */}
@@ -128,7 +170,7 @@ export default function SchemeDetailPage() {
         </div>
 
         {/* Info header */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3 text-sm">
           <div className="bg-white rounded-lg px-3 py-2">
             <div className="text-xs text-slate-500">Pelanggan</div>
             <div className="font-medium text-slate-800 text-sm truncate">{s.customer_name || "-"}</div>
@@ -140,6 +182,7 @@ export default function SchemeDetailPage() {
           <div className="bg-white rounded-lg px-3 py-2">
             <div className="text-xs text-slate-500">Produk</div>
             <div className="font-medium text-slate-800 text-sm truncate">{s.product_name || "-"}</div>
+            <div className="text-xs text-slate-400 mt-0.5">{formatLandArea(s.land_area, s.building_area)}</div>
           </div>
           <div className="bg-white rounded-lg px-3 py-2">
             <div className="text-xs text-slate-500">Harga Rumah</div>
