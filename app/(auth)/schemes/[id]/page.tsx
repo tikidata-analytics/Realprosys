@@ -5,7 +5,6 @@ import { useParams } from "next/navigation";
 import KprChart from "@/components/KprChart";
 import { downloadPdf, SchemePdfDocument } from "@/components/SchemePdfDocument";
 import { pdf } from "@react-pdf/renderer";
-import { formatLandArea } from "@/lib/formatters";
 
 function formatCurrency(val: number) {
   return Number(val || 0).toLocaleString("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 });
@@ -172,6 +171,10 @@ export default function SchemeDetailPage() {
         {/* Info header */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3 text-sm">
           <div className="bg-white rounded-lg px-3 py-2">
+            <div className="text-xs text-slate-500">Tanggal Booking</div>
+            <div className="font-semibold text-slate-800 text-sm">{new Date(s.booking_date).toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "numeric" })}</div>
+          </div>
+          <div className="bg-white rounded-lg px-3 py-2">
             <div className="text-xs text-slate-500">Pelanggan</div>
             <div className="font-medium text-slate-800 text-sm truncate">{s.customer_name || "-"}</div>
           </div>
@@ -182,7 +185,6 @@ export default function SchemeDetailPage() {
           <div className="bg-white rounded-lg px-3 py-2">
             <div className="text-xs text-slate-500">Produk</div>
             <div className="font-medium text-slate-800 text-sm truncate">{s.product_name || "-"}</div>
-            <div className="text-xs text-slate-400 mt-0.5">{formatLandArea(s.land_area, s.building_area)}</div>
           </div>
           <div className="bg-white rounded-lg px-3 py-2">
             <div className="text-xs text-slate-500">Harga Rumah</div>
