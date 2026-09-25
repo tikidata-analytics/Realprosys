@@ -81,7 +81,7 @@ export async function GET(req: NextRequest) {
 
   try {
     const result = await pool.query(
-      "SELECT id, name, username, email FROM users WHERE id = $1",
+      "SELECT id, name, username, email, tier FROM users WHERE id = $1",
       [userId]
     );
     if (result.rows.length === 0) return NextResponse.json({ error: "Not found" }, { status: 404 });

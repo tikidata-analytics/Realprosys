@@ -8,6 +8,7 @@ export default function ProfilePage() {
   const [name, setName] = useState("");
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
+  const [tier, setTier] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -30,6 +31,7 @@ export default function ProfilePage() {
         setName(data.name || "");
         setUsername(data.username || "");
         setEmail(data.email || "");
+        setTier(data.tier || "");
       })
       .catch(() => router.push("/login"))
       .finally(() => setLoading(false));
@@ -133,6 +135,19 @@ export default function ProfilePage() {
             <input type="email" value={email} disabled
               className="w-full px-4 py-2 border border-slate-200 rounded-lg bg-slate-50 text-slate-400 cursor-not-allowed" />
             <p className="text-xs text-slate-400 mt-1">Email tidak bisa diubah</p>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Tier</label>
+            <div className="flex items-center gap-2">
+              <input type="text" value={tier ? tier.charAt(0).toUpperCase() + tier.slice(1) : "Free"} disabled
+                className="flex-1 px-4 py-2 border border-slate-200 rounded-lg bg-slate-50 text-slate-400 cursor-not-allowed" />
+              <span className="px-3 py-2 text-xs font-semibold rounded-full bg-green-100 text-green-700 capitalize">
+                {tier || "free"}
+              </span>
+            </div>
+            {tier !== "free" && (
+              <p className="text-xs text-slate-400 mt-1">Upgrade membership via menu Upgrade</p>
+            )}
           </div>
           <button type="submit" disabled={saving}
             className="px-6 py-2 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition disabled:opacity-50">
