@@ -38,8 +38,11 @@ const ReCAPTCHA = forwardRef<ReCAPTCHAHandle, ReCAPTCHAProps>(
     useEffect(() => {
       if (!siteKey) return;
 
-      // Already have a widget — don't re-init (handles React StrictMode double-mount)
-      if (window.grecaptcha && widgetIdRef.current !== null) return;
+      // If grecaptcha is already loaded, just init the widget (no-op if already done)
+      if (window.grecaptcha) {
+        initWidget();
+        return;
+      }
 
       const callbackName = `onReCAPTCHALoad_${Date.now()}_${Math.random().toString(36).slice(2)}`;
       (window as unknown as Record<string, unknown>)[callbackName] = () => {
@@ -51,15 +54,13 @@ const ReCAPTCHA = forwardRef<ReCAPTCHAHandle, ReCAPTCHAProps>(
       script.async = true;
       document.head.appendChild(script);
 
+      // Do NOT remove the script on cleanup.
+      // 1. Once grecaptcha is loaded it's permanently in window.grecaptcha.
+      // 2. StrictMode double-mount would otherwise destroy the iframe on every cycle.
+      // 3. On re-mount with grecaptcha already present, initWidget() is a no-op
+      //    because widgetIdRef.current !== null.
       return () => {
         delete (window as unknown as Record<string, unknown>)[callbackName];
-        const existing = document.getElementById(callbackName);
-        if (existing) existing.remove();
-        // Reset widget so next mount starts fresh (handles pending script callback after unmount)
-        if (widgetIdRef.current !== null) {
-          try { window.grecaptcha?.reset(widgetIdRef.current); } catch { /* widget may already be gone */ }
-          widgetIdRef.current = null;
-        }
       };
     }, [siteKey, theme, initWidget]);
 
