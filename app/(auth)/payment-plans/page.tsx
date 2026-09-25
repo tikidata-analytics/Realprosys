@@ -34,7 +34,6 @@ export default function PaymentPlansPage() {
   const [submitting, setSubmitting] = useState(false);
   const [draggedIdx, setDraggedIdx] = useState<number | null>(null);
   const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
-  const [hasReordered, setHasReordered] = useState(false);
   const [sort, setSort] = useState("created_at:desc");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [page, setPage] = useState(1);
@@ -143,7 +142,6 @@ export default function PaymentPlansPage() {
     const [moved] = reordered.splice(draggedIdx, 1);
     reordered.splice(idx, 0, moved);
     setStages(reordered);
-    setHasReordered(true);
     setDraggedIdx(null);
     setDragOverIdx(null);
   };
@@ -151,10 +149,6 @@ export default function PaymentPlansPage() {
   const handleDragEnd = () => {
     setDraggedIdx(null);
     setDragOverIdx(null);
-  };
-
-  const handleSaveOrder = () => {
-    setHasReordered(false);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -236,7 +230,6 @@ export default function PaymentPlansPage() {
     );
     setShowForm(true);
     setEditingId(plan.id);
-    setHasReordered(false);
   };
 
   const handleDelete = async (id: string) => {
@@ -250,7 +243,6 @@ export default function PaymentPlansPage() {
     setEditingId(null);
     setForm({ name: "" });
     setStages([{ ...emptyStage(), stage_value: "20" }]);
-    setHasReordered(false);
   };
 
   const stageLabel = (type: string) => STAGE_TYPES.find(t => t.value === type)?.label || type;
@@ -268,7 +260,7 @@ export default function PaymentPlansPage() {
             onKeyDown={(e) => { if (e.key === "Escape") { setSearch(""); setPage(1); }}}
             className="px-4 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none w-64"
           />
-          <button onClick={() => { setShowForm(!showForm); setEditingId(null); setForm({ name: "" }); setStages([{ ...emptyStage(), stage_value: "20" }]); setHasReordered(false); }}
+          <button onClick={() => { setShowForm(!showForm); setEditingId(null); setForm({ name: "" }); setStages([{ ...emptyStage(), stage_value: "20" }]); }}
             disabled={atLimit}
             title={atLimit ? `Limit ${limit} tercapai. Upgrade ke Premium untuk menambah.` : ""}
             className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition disabled:opacity-50 disabled:cursor-not-allowed">
@@ -295,18 +287,10 @@ export default function PaymentPlansPage() {
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium text-slate-700">Tahapan Pembayaran</span>
-              <div className="flex items-center gap-2">
-                {hasReordered && (
-                  <button type="button" onClick={handleSaveOrder}
-                    className="text-xs px-3 py-1 bg-indigo-100 text-indigo-700 rounded-lg hover:bg-indigo-200 font-medium">
-                    Simpan Urutan
-                  </button>
-                )}
-                <button type="button" onClick={addStage}
-                  className="text-xs px-3 py-1 bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200">
-                  + Tambah Stage
-                </button>
-              </div>
+              <button type="button" onClick={addStage}
+                className="text-xs px-3 py-1 bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200">
+                + Tambah Stage
+              </button>
             </div>
 
             {stages.map((stage, idx) => (
