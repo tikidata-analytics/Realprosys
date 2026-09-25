@@ -25,6 +25,7 @@ export default function CustomersPage() {
   const [editId, setEditId] = useState<string | null>(null);
   const [form, setForm] = useState({ name: "", email: "", phone: "", birth_date: "", gender: "" });
   const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [sort, setSort] = useState("created_at:desc");
   const [page, setPage] = useState(1);
   const [atLimit, setAtLimit] = useState(false);
@@ -105,7 +106,7 @@ export default function CustomersPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
+    setSubmitting(true);
     const url = editId ? `/api/customers/${editId}` : "/api/customers";
     const method = editId ? "PUT" : "POST";
     const res = await fetch(url, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(form) });
@@ -115,7 +116,7 @@ export default function CustomersPage() {
       setEditId(null);
       fetchCustomers();
     }
-    setLoading(false);
+    setSubmitting(false);
   };
 
   const handleDelete = async (id: string) => {
@@ -191,7 +192,7 @@ export default function CustomersPage() {
             <label className="flex items-center gap-1"><input type="radio" name="gender" value="PEREMPUAN" checked={form.gender === "PEREMPUAN"} onChange={(e) => setForm({ ...form, gender: e.target.value })} /> Perempuan</label>
           </div>
           <div className="flex gap-2">
-            <button type="submit" disabled={loading} className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition disabled:opacity-50">{loading ? "Menyimpan..." : "Simpan"}</button>
+            <button type="submit" disabled={submitting} className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition disabled:opacity-50">{submitting ? "Menyimpan..." : "Simpan"}</button>
             <button type="button" onClick={cancelForm} className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-200 transition">Batal</button>
           </div>
         </form>

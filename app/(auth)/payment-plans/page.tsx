@@ -31,6 +31,7 @@ export default function PaymentPlansPage() {
   const [form, setForm] = useState({ name: "" });
   const [stages, setStages] = useState<any[]>([{ ...emptyStage(), stage_value: "20" }]);
   const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [sort, setSort] = useState("created_at:desc");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [page, setPage] = useState(1);
@@ -123,7 +124,7 @@ export default function PaymentPlansPage() {
       return;
     }
 
-    setLoading(true);
+    setSubmitting(true);
 
     // Expand stages by count
     const expandedStages: any[] = [];
@@ -174,7 +175,7 @@ export default function PaymentPlansPage() {
     setShowForm(false);
     setEditingId(null);
     fetchPlans();
-    setLoading(false);
+    setSubmitting(false);
   };
 
   const startEdit = (plan: any) => {
@@ -350,9 +351,9 @@ export default function PaymentPlansPage() {
           )}
 
           <div className="flex gap-3">
-            <button type="submit" disabled={loading || stages.length === 0}
+            <button type="submit" disabled={submitting || stages.length === 0}
               className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition disabled:opacity-50">
-              {loading ? "Menyimpan..." : editingId ? "Update" : "Simpan"}
+              {submitting ? "Menyimpan..." : editingId ? "Update" : "Simpan"}
             </button>
             {editingId && (
               <button type="button" onClick={cancelEdit}

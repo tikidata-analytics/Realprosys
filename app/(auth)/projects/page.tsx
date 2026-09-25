@@ -21,6 +21,7 @@ export default function ProjectsPage() {
   const [editId, setEditId] = useState<string | null>(null);
   const [form, setForm] = useState({ name: "", location: "" });
   const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [sort, setSort] = useState("created_at:desc");
   const [page, setPage] = useState(1);
   const [atLimit, setAtLimit] = useState(false);
@@ -74,7 +75,7 @@ export default function ProjectsPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
+    setSubmitting(true);
     const url = editId ? `/api/projects/${editId}` : "/api/projects";
     const method = editId ? "PUT" : "POST";
     const res = await fetch(url, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(form) });
@@ -84,7 +85,7 @@ export default function ProjectsPage() {
       setEditId(null);
       fetchProjects();
     }
-    setLoading(false);
+    setSubmitting(false);
   };
 
   const cancelForm = () => {
@@ -147,7 +148,7 @@ export default function ProjectsPage() {
               className="px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
           </div>
           <div className="flex gap-2">
-            <button type="submit" disabled={loading} className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition disabled:opacity-50">{loading ? "Menyimpan..." : "Simpan"}</button>
+            <button type="submit" disabled={submitting} className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition disabled:opacity-50">{submitting ? "Menyimpan..." : "Simpan"}</button>
             <button type="button" onClick={cancelForm} className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-200 transition">Batal</button>
           </div>
         </form>
