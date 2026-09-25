@@ -7,7 +7,8 @@ import { signIn } from "next-auth/react";
 import ReCAPTCHA, { ReCAPTCHAHandle } from "@/components/ReCAPTCHA";
 
 const SITE_KEY = process.env.NEXT_PUBLIC_GOOGLE_RECAPTCHA_SITE_KEY ?? "";
-const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ?? "";
+const GOOGLE_CLIENT_ID =
+  process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ?? process.env.GOOGLE_CLIENT_ID ?? "";
 
 export default function LoginPage() {
   const router = useRouter();
