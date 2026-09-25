@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useImperativeHandle, forwardRef } from "react";
+import { useEffect, useRef, useImperativeHandle, forwardRef, useCallback } from "react";
 
 export interface ReCAPTCHAHandle {
   getToken: () => Promise<string>;
@@ -15,77 +15,68 @@ interface ReCAPTCHAProps {
 const ReCAPTCHA = forwardRef<ReCAPTCHAHandle, ReCAPTCHAProps>(
   ({ siteKey, theme = "light" }, ref) => {
     const containerRef = useRef<HTMLDivElement>(null);
-    const widgetId = useRef<number | null>(null);
+    const widgetIdRef = useRef<number | null>(null);
+
+    // Stable init function that always reads the current widgetIdRef
+    const initWidget = useCallback(() => {
+      if (typeof window === "undefined" || !window.grecaptcha) return;
+      if (widgetIdRef.current !== null) return; // already rendered
+      if (!containerRef.current) return;
+      widgetIdRef.current = window.grecaptcha.render(containerRef.current, {
+        sitekey: siteKey,
+        theme,
+        callback: () => {},
+        "expired-callback": () => {
+          if (widgetIdRef.current !== null) window.grecaptcha!.reset(widgetIdRef.current);
+        },
+        "error-callback": () => {
+          if (widgetIdRef.current !== null) window.grecaptcha!.reset(widgetIdRef.current);
+        },
+      });
+    }, [siteKey, theme]);
 
     useEffect(() => {
-      if (!siteKey || !containerRef.current) return;
+      if (!siteKey) return;
 
-      const existing = containerRef.current.querySelector(".g-recaptcha");
-      if (existing) existing.remove();
+      // Already have a widget — don't re-init (handles React StrictMode double-mount)
+      if (window.grecaptcha && widgetIdRef.current !== null) return;
 
-      const callbackName = `onReCAPTCHALoad_${Date.now()}`;
-      const scriptId = `recaptcha-script-${callbackName}`;
-
-      const init = () => {
-        if (typeof window === "undefined" || !window.grecaptcha) return;
-        if (widgetId.current !== null) {
-          window.grecaptcha.reset(widgetId.current);
-          return;
-        }
-        widgetId.current = window.grecaptcha.render(containerRef.current!, {
-          sitekey: siteKey,
-          theme,
-          callback: () => {},
-          "expired-callback": () => {
-            if (widgetId.current !== null) window.grecaptcha.reset(widgetId.current);
-          },
-          "error-callback": () => {
-            if (widgetId.current !== null) window.grecaptcha.reset(widgetId.current);
-          },
-        });
+      const callbackName = `onReCAPTCHALoad_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+      (window as unknown as Record<string, unknown>)[callbackName] = () => {
+        initWidget();
       };
 
-      if (window.grecaptcha) {
-        init();
-        return;
-      }
-
-      (window as unknown as Record<string, unknown>)[callbackName] = init;
-
       const script = document.createElement("script");
-      script.id = scriptId;
       script.src = `https://www.google.com/recaptcha/api.js?onload=${callbackName}&render=explicit`;
       script.async = true;
       document.head.appendChild(script);
 
       return () => {
         delete (window as unknown as Record<string, unknown>)[callbackName];
-        const s = document.getElementById(scriptId);
-        if (s) s.remove();
-        if (widgetId.current !== null) {
-          window.grecaptcha?.reset(widgetId.current);
-          widgetId.current = null;
+        const existing = document.getElementById(callbackName);
+        if (existing) existing.remove();
+        // Reset widget so next mount starts fresh (handles pending script callback after unmount)
+        if (widgetIdRef.current !== null) {
+          try { window.grecaptcha?.reset(widgetIdRef.current); } catch { /* widget may already be gone */ }
+          widgetIdRef.current = null;
         }
       };
-    }, [siteKey, theme]);
+    }, [siteKey, theme, initWidget]);
 
     useImperativeHandle(ref, () => ({
       getToken: async () => {
-        if (widgetId.current === null) return "";
-        return window.grecaptcha.getResponse(widgetId.current);
+        if (widgetIdRef.current === null || !window.grecaptcha) return "";
+        return window.grecaptcha.getResponse(widgetIdRef.current);
       },
       reset: () => {
-        if (widgetId.current !== null) window.grecaptcha.reset(widgetId.current);
+        if (widgetIdRef.current !== null && window.grecaptcha) {
+          window.grecaptcha.reset(widgetIdRef.current);
+        }
       },
     }));
 
-    return (
-      <div
-        ref={containerRef}
-        className="g-recaptcha"
-        data-sitekey={siteKey}
-      />
-    );
+    // No data-sitekey attr — we call render() explicitly, not auto-render
+    return <div ref={containerRef} className="g-recaptcha" />;
   }
 );
 
