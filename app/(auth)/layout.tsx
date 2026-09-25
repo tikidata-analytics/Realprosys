@@ -93,7 +93,14 @@ export default function ProtectedLayout({ children }: { children: React.ReactNod
                   </svg>
                 </button>
                 {menuOpen && (
-                  <div className="absolute right-0 mt-1 w-44 bg-white border border-slate-200 rounded-xl shadow-lg py-1 z-50">
+                  <div className="absolute right-0 mt-1 w-52 bg-white border border-slate-200 rounded-xl shadow-lg py-1 z-50">
+                    <div className="px-4 py-2 border-b border-slate-100">
+                      <p className="text-sm font-medium text-slate-800 truncate">{user?.name}</p>
+                      <p className="text-xs text-slate-400 truncate">{user?.email}</p>
+                      <span className="inline-block mt-1 px-2 py-0.5 text-xs font-semibold rounded-full bg-green-100 text-green-700 capitalize">
+                        {user?.tier ?? "free"}
+                      </span>
+                    </div>
                     {menuItems.map(({ href, label }) => (
                       <Link key={href} href={href}
                         onClick={() => setMenuOpen(false)}
