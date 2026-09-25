@@ -18,6 +18,10 @@ export default function SchemeDetailPage() {
   const [pdfLoading, setPdfLoading] = useState(false);
   const [editingName, setEditingName] = useState(false);
   const [nameInput, setNameInput] = useState("");
+  const [editingPlan, setEditingPlan] = useState(false);
+  const [selectedPlanId, setSelectedPlanId] = useState("");
+  const [paymentPlans, setPaymentPlans] = useState<any[]>([]);
+  const [updatingPlan, setUpdatingPlan] = useState(false);
   const nameInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -44,6 +48,39 @@ export default function SchemeDetailPage() {
       setScheme((prev: any) => ({ ...prev, name: newName }));
     }
     setEditingName(false);
+  };
+
+  useEffect(() => {
+    if (!editingPlan) return;
+    fetch("/api/payment-plans?page=1&limit=100")
+      .then((r) => r.json())
+      .then((data) => {
+        setPaymentPlans(data.rows || []);
+        if (scheme) setSelectedPlanId(scheme.payment_plan_id || "");
+      })
+      .catch(console.error);
+  }, [editingPlan, scheme]);
+
+  const savePlan = async () => {
+    if (!selectedPlanId || selectedPlanId === scheme.payment_plan_id) {
+      setEditingPlan(false);
+      return;
+    }
+    setUpdatingPlan(true);
+    const res = await fetch(`/api/schemes/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ payment_plan_id: selectedPlanId }),
+    });
+    if (res.ok) {
+      const updated = await res.json();
+      setScheme(updated);
+      setEditingPlan(false);
+    } else {
+      const err = await res.json();
+      alert("Gagal update rencana bayar: " + (err.error || "Unknown error"));
+    }
+    setUpdatingPlan(false);
   };
 
   useEffect(() => {
@@ -169,7 +206,7 @@ export default function SchemeDetailPage() {
         </div>
 
         {/* Info header */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-3 text-sm">
+        <div className="grid grid-cols-2 md:grid-cols-6 gap-3 text-sm">
           <div className="bg-white rounded-lg px-3 py-2">
             <div className="text-xs text-slate-500">Tanggal Booking</div>
             <div className="font-semibold text-slate-800 text-sm">{new Date(s.booking_date).toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "numeric" })}</div>
@@ -189,6 +226,40 @@ export default function SchemeDetailPage() {
           <div className="bg-white rounded-lg px-3 py-2">
             <div className="text-xs text-slate-500">Harga Rumah</div>
             <div className="font-medium text-slate-800 text-sm">{formatCurrency(sched.housePrice)}</div>
+          </div>
+          <div className="bg-white rounded-lg px-3 py-2">
+            <div className="text-xs text-slate-500">Rencana Bayar</div>
+            {editingPlan ? (
+              <div className="flex items-center gap-1">
+                <select
+                  value={selectedPlanId}
+                  onChange={(e) => setSelectedPlanId(e.target.value)}
+                  className="px-1.5 py-1 border border-slate-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                >
+                  <option value="">-- Pilih --</option>
+                  {paymentPlans.map((p: any) => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
+                </select>
+                <button
+                  onClick={savePlan}
+                  disabled={updatingPlan}
+                  className="px-2 py-1 bg-indigo-600 text-white rounded text-xs hover:bg-indigo-700 disabled:opacity-50"
+                >
+                  {updatingPlan ? "..." : "✓"}
+                </button>
+                <button onClick={() => setEditingPlan(false)} className="px-2 py-1 text-slate-500 hover:text-slate-700 text-xs">✕</button>
+              </div>
+            ) : (
+              <div
+                className="flex items-center gap-1 cursor-pointer group"
+                onClick={() => { setSelectedPlanId(s.payment_plan_id || ""); setEditingPlan(true); }}
+                title="Klik untuk ganti rencana bayar"
+              >
+                <div className="font-medium text-slate-800 text-sm truncate">{s.payment_plan_name || "-"}</div>
+                <span className="text-slate-400 group-hover:text-indigo-500 text-xs">✏️</span>
+              </div>
+            )}
           </div>
         </div>
 
