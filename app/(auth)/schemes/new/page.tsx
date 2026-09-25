@@ -412,18 +412,26 @@ export default function NewSchemePage() {
 
             {/* Info header */}
             <div className="grid grid-cols-2 md:grid-cols-5 gap-3 text-sm">
-              {[
-                { label: "Pelanggan", value: preview.customerName || "-" },
-                { label: "Proyek", value: preview.projectName || "-" },
-                { label: "Produk", value: preview.productName || "-" },
-                { label: "Luas", value: showNewProduct ? "-" : formatLandArea(selectedProduct?.land_area, selectedProduct?.building_area) },
-                { label: "Harga Rumah", value: formatCurrency(preview.housePrice) },
-              ].map(({ label, value }) => (
-                <div key={label} className="bg-white rounded-lg px-3 py-2">
-                  <div className="text-xs text-slate-500">{label}</div>
-                  <div className="font-medium text-slate-800 text-sm truncate">{value}</div>
-                </div>
-              ))}
+              <div className="bg-white rounded-lg px-3 py-2">
+                <div className="text-xs text-slate-500">Tanggal Booking</div>
+                <div className="font-semibold text-slate-800 text-sm">{form.booking_date ? new Date(form.booking_date).toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "numeric" }) : "-"}</div>
+              </div>
+              <div className="bg-white rounded-lg px-3 py-2">
+                <div className="text-xs text-slate-500">Pelanggan</div>
+                <div className="font-medium text-slate-800 text-sm truncate">{preview.customerName || "-"}</div>
+              </div>
+              <div className="bg-white rounded-lg px-3 py-2">
+                <div className="text-xs text-slate-500">Proyek</div>
+                <div className="font-medium text-slate-800 text-sm truncate">{preview.projectName || "-"}</div>
+              </div>
+              <div className="bg-white rounded-lg px-3 py-2">
+                <div className="text-xs text-slate-500">Produk</div>
+                <div className="font-medium text-slate-800 text-sm truncate">{preview.productName || "-"}</div>
+              </div>
+              <div className="bg-white rounded-lg px-3 py-2">
+                <div className="text-xs text-slate-500">Harga Rumah</div>
+                <div className="font-bold text-indigo-900">{formatCurrency(preview.housePrice)}</div>
+              </div>
             </div>
 
             {/* Summary */}
