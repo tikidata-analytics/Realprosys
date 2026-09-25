@@ -177,6 +177,10 @@ export default function SharePage() {
 
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3 text-sm">
           <div className="bg-white rounded-lg px-3 py-2">
+            <div className="text-xs text-slate-500">Tanggal Booking</div>
+            <div className="font-semibold text-slate-800 text-sm">{new Date(s.booking_date).toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "numeric" })}</div>
+          </div>
+          <div className="bg-white rounded-lg px-3 py-2">
             <div className="text-xs text-slate-500">Total Tagihan</div>
             <div className="font-bold text-indigo-900">{formatCurrency(housePrice)}</div>
           </div>

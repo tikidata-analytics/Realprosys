@@ -109,7 +109,6 @@ export default function SchemesPage() {
         </div>
       ) : (
         <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-          {/* Search */}
           <div className="px-4 py-3 border-b border-slate-200">
             <input
               type="text"
@@ -119,6 +118,14 @@ export default function SchemesPage() {
               className="w-full sm:w-72 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"
             />
           </div>
+          {schemes.length > 0 && (
+            <div className="px-4 py-3 bg-indigo-50 border-b border-indigo-100 flex items-center gap-2 text-sm">
+              <span className="text-slate-500">Skema pertama:</span>
+              <span className="font-semibold text-indigo-800">{schemes[0].name}</span>
+              <span className="text-slate-400">—</span>
+              <span className="text-slate-600">Booking: {formatDate(schemes[0].booking_date)}</span>
+            </div>
+          )}
 
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
