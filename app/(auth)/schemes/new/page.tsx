@@ -306,6 +306,13 @@ export default function NewSchemePage() {
               />
             </div>
           </div>
+
+          {form.booking_date && (
+            <div className="px-4 py-3 bg-indigo-50 border border-indigo-100 rounded-lg flex items-center gap-3">
+              <div className="text-xs text-indigo-500">Tanggal Booking</div>
+              <div className="font-semibold text-indigo-800 text-sm">{new Date(form.booking_date).toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "numeric" })}</div>
+            </div>
+          )}
         </div>
 
         <div className="bg-white rounded-xl shadow-sm p-6 space-y-4">
