@@ -5,6 +5,51 @@ import { checkLimit, limitResponse } from "@/lib/limits";
 import { getUserIdFromRequest } from "@/lib/auth-api";
 import { getUserResourceLimit } from "@/lib/resource-limits";
 
+/**
+ * Ad-hoc product creation — name + price only, no project required.
+ * Used from the new-scheme inline form for quick one-off product entry.
+ */
+export async function POST(req: NextRequest) {
+  const userId = await getUserIdFromRequest(req);
+  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const limit = await checkLimit(userId, "products");
+  if (!limit) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!limit.allowed) return limitResponse("products");
+
+  try {
+    const body = await req.json();
+
+    // Ad-hoc path: name + price only (no project)
+    if (body._adhoc) {
+      const { name, price } = body;
+      if (!name || !price) return NextResponse.json({ error: "Nama dan harga wajib diisi" }, { status: 400 });
+      const id = generateId();
+      await pool.query(
+        "INSERT INTO products (id, user_id, name, price, project_id, land_area, building_area, bedrooms, bathrooms) VALUES ($1,$2,$3,$4,NULL,NULL,NULL,NULL,NULL)",
+        [id, userId, name.trim(), price]
+      );
+      return NextResponse.json({ id, user_id: userId, name: name.trim(), price }, { status: 201 });
+    }
+
+    // Full product creation
+    const { name, type, price, project_id, land_area, building_area, bedrooms, bathrooms } = body;
+    if (!name || !type || !price || !project_id) return NextResponse.json({ error: "Name, type, price, project_id wajib diisi" }, { status: 400 });
+    if (!land_area || !building_area || !bedrooms || !bathrooms) return NextResponse.json({ error: "Luas tanah, luas bangunan, kamar tidur, kamar mandi wajib diisi" }, { status: 400 });
+
+    const projectCheck = await pool.query("SELECT id FROM projects WHERE id=$1 AND user_id=$2", [project_id, userId]);
+    if (projectCheck.rows.length === 0) return NextResponse.json({ error: "Proyek tidak ditemukan" }, { status: 404 });
+
+    const id = generateId();
+    await pool.query(
+      "INSERT INTO products (id, user_id, name, type, price, project_id, land_area, building_area, bedrooms, bathrooms) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)",
+      [id, userId, name, type, price, project_id, land_area, building_area, bedrooms, bathrooms]
+    );
+    return NextResponse.json({ id, user_id: userId, name, type, price, project_id, land_area, building_area, bedrooms, bathrooms }, { status: 201 });
+  } catch {
+    return NextResponse.json({ error: "Failed" }, { status: 500 });
+  }
+}
 
 export async function GET(req: NextRequest) {
   const userId = await getUserIdFromRequest(req);
@@ -55,34 +100,6 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ rows, total, page, pageSize: PAGE_SIZE, totalPages: Math.ceil(total / PAGE_SIZE), limit });
   } catch (err) {
     console.error("GET /api/products error:", err);
-    return NextResponse.json({ error: "Failed" }, { status: 500 });
-  }
-}
-
-export async function POST(req: NextRequest) {
-  const userId = await getUserIdFromRequest(req);
-  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-  const limit = await checkLimit(userId, "products");
-  if (!limit) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  if (!limit.allowed) return limitResponse("products");
-
-  try {
-    const { name, type, price, project_id, land_area, building_area, bedrooms, bathrooms } = await req.json();
-    if (!name || !type || !price || !project_id) return NextResponse.json({ error: "Name, type, price, project_id wajib diisi" }, { status: 400 });
-    if (!land_area || !building_area || !bedrooms || !bathrooms) return NextResponse.json({ error: "Luas tanah, luas bangunan, kamar tidur, kamar mandi wajib diisi" }, { status: 400 });
-
-    // Validate project ownership
-    const projectCheck = await pool.query("SELECT id FROM projects WHERE id=$1 AND user_id=$2", [project_id, userId]);
-    if (projectCheck.rows.length === 0) return NextResponse.json({ error: "Proyek tidak ditemukan" }, { status: 404 });
-
-    const id = generateId();
-    await pool.query(
-      "INSERT INTO products (id, user_id, name, type, price, project_id, land_area, building_area, bedrooms, bathrooms) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)",
-      [id, userId, name, type, price, project_id, land_area, building_area, bedrooms, bathrooms]
-    );
-    return NextResponse.json({ id, user_id: userId, name, type, price, project_id, land_area, building_area, bedrooms, bathrooms }, { status: 201 });
-  } catch {
     return NextResponse.json({ error: "Failed" }, { status: 500 });
   }
 }

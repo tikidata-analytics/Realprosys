@@ -17,6 +17,9 @@ export default function NewSchemePage() {
   const [form, setForm] = useState({ name: "", customer_id: "", product_id: "", payment_plan_id: "", booking_date: "" });
   const [newCustomerName, setNewCustomerName] = useState("");
   const [showNewCustomer, setShowNewCustomer] = useState(false);
+  const [newProductName, setNewProductName] = useState("");
+  const [newProductPrice, setNewProductPrice] = useState("");
+  const [showNewProduct, setShowNewProduct] = useState(false);
   const [loading, setLoading] = useState(false);
   const [preview, setPreview] = useState<any>(null);
 
@@ -54,7 +57,11 @@ export default function NewSchemePage() {
       alert("Pilih pelanggan terlebih dahulu.");
       return;
     }
-    if (!form.product_id) {
+    if (showNewProduct && (!newProductName.trim() || !newProductPrice)) {
+      alert("Masukkan nama dan harga produk terlebih dahulu.");
+      return;
+    }
+    if (!showNewProduct && !form.product_id) {
       alert("Pilih produk terlebih dahulu.");
       return;
     }
@@ -74,11 +81,10 @@ export default function NewSchemePage() {
     const plan = await planRes.json();
     const stages = plan.stages || [];
 
-    const product = products.find((p) => p.id === form.product_id);
+    const housePrice = showNewProduct ? Number(newProductPrice) : Number(selectedProduct?.price || 0);
+    const productName = showNewProduct ? newProductName : (selectedProduct?.name || "-");
     const customer = showNewCustomer ? { name: newCustomerName } : customers.find((c: any) => c.id === form.customer_id);
-    if (!product) return;
-
-    const housePrice = Number(product.price || 0);
+    if (!showNewProduct && !selectedProduct) return;
 
     let otherTotal = 0;
     let kprRate = 0;
@@ -187,8 +193,8 @@ export default function NewSchemePage() {
     setPreview({
       housePrice,
       customerName: customer?.name || "-",
-      productName: product?.name || "-",
-      projectName: product?.project_name || "-",
+      productName: productName || "-",
+      projectName: showNewProduct ? "-" : (selectedProduct?.project_name || "-"),
       stages: previewStages,
       kprAmount,
       kprPct: housePrice > 0 ? Math.round(kprAmount / housePrice * 100 * 100) / 100 : 0,
@@ -211,8 +217,9 @@ export default function NewSchemePage() {
       return;
     }
 
-    if (!form.name || !form.product_id || !form.payment_plan_id || !form.booking_date) return;
+    if (!form.name || !form.payment_plan_id || !form.booking_date) return;
     if (!showNewCustomer && !form.customer_id) return;
+    if (!showNewProduct && !form.product_id) return;
 
     // Validate: warn on zero-value non-KPR stages
     const plan = paymentPlans.find((p) => p.id === form.payment_plan_id);
@@ -237,12 +244,25 @@ export default function NewSchemePage() {
       if (!cr.ok) { alert("Gagal membuat pelanggan baru"); setLoading(false); return; }
       const cd = await cr.json();
       customerId = cd.id;
-      // Refresh customer list
       const crlist = await fetch("/api/customers").then(r => r.json());
       setCustomers(crlist);
     }
 
-    const payload = { ...form, customer_id: customerId };
+    let productId = form.product_id;
+    if (showNewProduct) {
+      const pr = await fetch("/api/products", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ _adhoc: true, name: newProductName.trim(), price: Number(newProductPrice) }),
+      });
+      if (!pr.ok) { alert("Gagal membuat produk baru"); setLoading(false); return; }
+      const pd = await pr.json();
+      productId = pd.id;
+      const prlist = await fetch("/api/products").then(r => r.json());
+      setProducts(prlist.rows || []);
+    }
+
+    const payload = { ...form, customer_id: customerId, product_id: productId };
     const res = await fetch("/api/schemes", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -325,14 +345,45 @@ export default function NewSchemePage() {
             </div>
 
             {/* Produk */}
-            <SearchableSelect
-              label="Produk"
-              options={products.map((p) => ({ value: p.id, label: `${p.name} - ${formatCurrency(p.price)}` }))}
-              value={form.product_id}
-              onChange={(val) => { setForm({ ...form, product_id: val }); setPreview(null); }}
-              placeholder="Cari produk..."
-              required
-            />
+            <div className="relative">
+              <SearchableSelect
+                label="Produk"
+                options={[
+                  { value: "__NEW__", label: "+ Tambah Baru" },
+                  ...products.map((p) => ({ value: p.id, label: `${p.name} - ${formatCurrency(p.price)}` })),
+                ]}
+                value={showNewProduct ? "__NEW__" : form.product_id}
+                onChange={(val) => {
+                  if (val === "__NEW__") {
+                    setShowNewProduct(true);
+                    setForm({ ...form, product_id: "" });
+                  } else {
+                    setShowNewProduct(false);
+                    setForm({ ...form, product_id: val });
+                  }
+                }}
+                placeholder="Cari produk..."
+                required
+              />
+              {showNewProduct && (
+                <div className="mt-2 space-y-2">
+                  <input
+                    type="text"
+                    value={newProductName}
+                    onChange={(e) => setNewProductName(e.target.value)}
+                    placeholder="Nama produk *"
+                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none text-sm"
+                  />
+                  <input
+                    type="number"
+                    value={newProductPrice}
+                    onChange={(e) => setNewProductPrice(e.target.value)}
+                    placeholder="Harga (Rp) *"
+                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none text-sm"
+                  />
+                </div>
+              )}
+            </div>
 
             {/* Rencana Pembayaran */}
             <SearchableSelect
@@ -365,7 +416,7 @@ export default function NewSchemePage() {
                 { label: "Pelanggan", value: preview.customerName || "-" },
                 { label: "Proyek", value: preview.projectName || "-" },
                 { label: "Produk", value: preview.productName || "-" },
-                { label: "Luas", value: formatLandArea(selectedProduct?.land_area, selectedProduct?.building_area) },
+                { label: "Luas", value: showNewProduct ? "-" : formatLandArea(selectedProduct?.land_area, selectedProduct?.building_area) },
                 { label: "Harga Rumah", value: formatCurrency(preview.housePrice) },
               ].map(({ label, value }) => (
                 <div key={label} className="bg-white rounded-lg px-3 py-2">
