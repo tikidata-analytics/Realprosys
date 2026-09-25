@@ -25,7 +25,15 @@ export default function DashboardPage() {
       .catch(console.error);
   }, []);
 
-  const greeting = userName ? `Selamat datang, ${userName}!` : "Selamat datang di Realprosys";
+  const greeting = userName ? (
+    <span>
+      Selamat datang,{" "}
+      <Link href="/profile" className="text-indigo-600 hover:text-indigo-800 font-medium">
+        {userName}
+      </Link>
+      !
+    </span>
+  ) : "Selamat datang di Realprosys";
 
   return (
     <div>
@@ -34,9 +42,6 @@ export default function DashboardPage() {
           <h2 className="text-2xl font-bold text-slate-900">Dashboard</h2>
           <p className="text-slate-500 mt-1">{greeting}</p>
         </div>
-        <a href="/profile" className="text-sm text-indigo-600 hover:text-indigo-800 font-medium">
-          Edit Profil
-        </a>
       </div>
 
       {stats ? (
