@@ -94,13 +94,14 @@ export default function ProtectedLayout({ children }: { children: React.ReactNod
                 </button>
                 {menuOpen && (
                   <div className="absolute right-0 mt-1 w-52 bg-white border border-slate-200 rounded-xl shadow-lg py-1 z-50">
-                    <div className="px-4 py-2 border-b border-slate-100">
+                    <Link href="/profile" onClick={() => setMenuOpen(false)}
+                      className="block px-4 py-2 border-b border-slate-100 hover:bg-indigo-50">
                       <p className="text-sm font-medium text-slate-800 truncate">{user?.name}</p>
                       <p className="text-xs text-slate-400 truncate">{user?.email}</p>
                       <span className="inline-block mt-1 px-2 py-0.5 text-xs font-semibold rounded-full bg-green-100 text-green-700 capitalize">
                         {user?.tier ?? "free"}
                       </span>
-                    </div>
+                    </Link>
                     {menuItems.map(({ href, label }) => (
                       <Link key={href} href={href}
                         onClick={() => setMenuOpen(false)}
@@ -119,11 +120,6 @@ export default function ProtectedLayout({ children }: { children: React.ReactNod
                       </>
                     )}
                     <div className="border-t border-slate-100 my-1" />
-                    <Link href="/profile"
-                      onClick={() => setMenuOpen(false)}
-                      className="block px-4 py-2 text-sm text-slate-700 hover:bg-indigo-50 hover:text-indigo-700">
-                      Edit Profil
-                    </Link>
                     <button onClick={() => { setMenuOpen(false); handleLogout(); }}
                       className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50">
                       Keluar
@@ -159,13 +155,14 @@ export default function ProtectedLayout({ children }: { children: React.ReactNod
                 Dashboard
               </Link>
               <div className="border-t border-slate-100 mt-1 pt-1">
-                <div className="px-4 py-2">
+                <Link href="/profile" onClick={() => setMobileMenuOpen(false)}
+                  className="block px-4 py-2 hover:bg-indigo-50">
                   <p className="text-sm font-medium text-slate-800 truncate">{user?.name}</p>
                   <p className="text-xs text-slate-400 truncate">{user?.email}</p>
                   <span className="inline-block mt-1 px-2 py-0.5 text-xs font-semibold rounded-full bg-green-100 text-green-700 capitalize">
                     {user?.tier ?? "free"}
                   </span>
-                </div>
+                </Link>
               </div>
               <div className="px-3 py-2 text-xs font-semibold text-slate-400 uppercase tracking-wide">Menu</div>
               {menuItems.map(({ href, label }) => (
@@ -192,10 +189,6 @@ export default function ProtectedLayout({ children }: { children: React.ReactNod
                   </Link>
                 )}
               </div>
-              <Link href="/profile" onClick={() => setMobileMenuOpen(false)}
-                className="mx-3 my-1 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-indigo-50 rounded-lg text-left">
-                Edit Profil
-              </Link>
               <button onClick={() => { setMobileMenuOpen(false); handleLogout(); }}
                 className="mx-3 my-1 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg text-left">
                 Keluar
