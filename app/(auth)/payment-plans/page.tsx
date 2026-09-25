@@ -32,6 +32,9 @@ export default function PaymentPlansPage() {
   const [stages, setStages] = useState<any[]>([{ ...emptyStage(), stage_value: "20" }]);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [draggedIdx, setDraggedIdx] = useState<number | null>(null);
+  const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
+  const [hasReordered, setHasReordered] = useState(false);
   const [sort, setSort] = useState("created_at:desc");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [page, setPage] = useState(1);
@@ -113,6 +116,47 @@ export default function PaymentPlansPage() {
     setStages(updated);
   };
 
+  // Drag-to-reorder
+  const handleDragStart = (e: React.DragEvent, idx: number) => {
+    setDraggedIdx(idx);
+    e.dataTransfer.effectAllowed = "move";
+  };
+
+  const handleDragOver = (e: React.DragEvent, idx: number) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    setDragOverIdx(idx);
+  };
+
+  const handleDragLeave = () => {
+    setDragOverIdx(null);
+  };
+
+  const handleDrop = (e: React.DragEvent, idx: number) => {
+    e.preventDefault();
+    if (draggedIdx === null || draggedIdx === idx) {
+      setDraggedIdx(null);
+      setDragOverIdx(null);
+      return;
+    }
+    const reordered = [...stages];
+    const [moved] = reordered.splice(draggedIdx, 1);
+    reordered.splice(idx, 0, moved);
+    setStages(reordered);
+    setHasReordered(true);
+    setDraggedIdx(null);
+    setDragOverIdx(null);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedIdx(null);
+    setDragOverIdx(null);
+  };
+
+  const handleSaveOrder = () => {
+    setHasReordered(false);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.name.trim()) return;
@@ -192,6 +236,7 @@ export default function PaymentPlansPage() {
     );
     setShowForm(true);
     setEditingId(plan.id);
+    setHasReordered(false);
   };
 
   const handleDelete = async (id: string) => {
@@ -205,6 +250,7 @@ export default function PaymentPlansPage() {
     setEditingId(null);
     setForm({ name: "" });
     setStages([{ ...emptyStage(), stage_value: "20" }]);
+    setHasReordered(false);
   };
 
   const stageLabel = (type: string) => STAGE_TYPES.find(t => t.value === type)?.label || type;
@@ -222,7 +268,7 @@ export default function PaymentPlansPage() {
             onKeyDown={(e) => { if (e.key === "Escape") { setSearch(""); setPage(1); }}}
             className="px-4 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none w-64"
           />
-          <button onClick={() => { setShowForm(!showForm); setEditingId(null); setForm({ name: "" }); setStages([{ ...emptyStage(), stage_value: "20" }]); }}
+          <button onClick={() => { setShowForm(!showForm); setEditingId(null); setForm({ name: "" }); setStages([{ ...emptyStage(), stage_value: "20" }]); setHasReordered(false); }}
             disabled={atLimit}
             title={atLimit ? `Limit ${limit} tercapai. Upgrade ke Premium untuk menambah.` : ""}
             className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition disabled:opacity-50 disabled:cursor-not-allowed">
@@ -249,16 +295,30 @@ export default function PaymentPlansPage() {
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium text-slate-700">Tahapan Pembayaran</span>
-              <button type="button" onClick={addStage}
-                className="text-xs px-3 py-1 bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200">
-                + Tambah Stage
-              </button>
+              <div className="flex items-center gap-2">
+                {hasReordered && (
+                  <button type="button" onClick={handleSaveOrder}
+                    className="text-xs px-3 py-1 bg-indigo-100 text-indigo-700 rounded-lg hover:bg-indigo-200 font-medium">
+                    Simpan Urutan
+                  </button>
+                )}
+                <button type="button" onClick={addStage}
+                  className="text-xs px-3 py-1 bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200">
+                  + Tambah Stage
+                </button>
+              </div>
             </div>
 
             {stages.map((stage, idx) => (
-              <div key={idx} className="flex items-center gap-2 p-3 bg-slate-50 rounded-lg border border-slate-200">
-                {/* Drag handle */}
-                <span className="text-slate-400 cursor-grab text-sm">☰</span>
+              <div key={idx}
+              draggable
+              onDragStart={(e) => handleDragStart(e, idx)}
+              onDragOver={(e) => handleDragOver(e, idx)}
+              onDragLeave={handleDragLeave}
+              onDrop={(e) => handleDrop(e, idx)}
+              onDragEnd={handleDragEnd}
+              className={`flex items-center gap-2 p-3 bg-slate-50 rounded-lg border transition-colors ${draggedIdx === idx ? "opacity-50" : ""} ${dragOverIdx === idx ? "border-indigo-400 bg-indigo-50" : "border-slate-200"}`}>
+                <span className="text-slate-400 cursor-grab text-sm select-none">☰</span>
 
                 {/* Stage type */}
                 <select value={stage.stage_type}
