@@ -12,17 +12,27 @@ export default function ProtectedLayout({ children }: { children: React.ReactNod
   const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
-    fetch("/api/auth/me")
-      .then((r) => r.json())
-      .then((data) => {
-        if (!data.user) {
-          router.push("/login");
-        } else {
-          setUser(data.user);
-          setLoading(false);
-        }
-      })
-      .catch(() => router.push("/login"));
+    const fetchUser = () => {
+      fetch("/api/auth/me")
+        .then((r) => r.json())
+        .then((data) => {
+          if (!data.user) {
+            router.push("/login");
+          } else {
+            setUser(data.user);
+            setLoading(false);
+          }
+        })
+        .catch(() => router.push("/login"));
+    };
+
+    fetchUser();
+
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") fetchUser();
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => document.removeEventListener("visibilitychange", handleVisibility);
   }, [router]);
 
   const handleLogout = async () => {
