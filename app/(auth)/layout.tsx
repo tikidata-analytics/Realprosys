@@ -158,6 +158,15 @@ export default function ProtectedLayout({ children }: { children: React.ReactNod
                 className="px-3 py-2 text-sm font-medium text-slate-700 hover:bg-indigo-50 rounded-lg">
                 Dashboard
               </Link>
+              <div className="border-t border-slate-100 mt-1 pt-1">
+                <div className="px-4 py-2">
+                  <p className="text-sm font-medium text-slate-800 truncate">{user?.name}</p>
+                  <p className="text-xs text-slate-400 truncate">{user?.email}</p>
+                  <span className="inline-block mt-1 px-2 py-0.5 text-xs font-semibold rounded-full bg-green-100 text-green-700 capitalize">
+                    {user?.tier ?? "free"}
+                  </span>
+                </div>
+              </div>
               <div className="px-3 py-2 text-xs font-semibold text-slate-400 uppercase tracking-wide">Menu</div>
               {menuItems.map(({ href, label }) => (
                 <Link key={href} href={href} onClick={() => setMobileMenuOpen(false)}
