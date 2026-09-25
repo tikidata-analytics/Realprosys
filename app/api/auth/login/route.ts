@@ -5,6 +5,22 @@ import { rateLimit } from "@/lib/rate-limit";
 
 const SESSION_COOKIE = "realprosys_session";
 
+async function verifyRecaptcha(token: string): Promise<boolean> {
+  const secretKey = process.env.GOOGLE_RECAPTCHA_SECRET_KEY;
+  if (!secretKey || !token) return true; // skip if not configured
+  try {
+    const res = await fetch("https://www.google.com/recaptcha/api/siteverify", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ secret: secretKey, response: token }),
+    });
+    const data = await res.json();
+    return data.success === true;
+  } catch {
+    return false;
+  }
+}
+
 export async function POST(req: NextRequest) {
   const ip = req.headers.get("x-forwarded-for") || "unknown";
   const rl = rateLimit(`auth-login:${ip}`);
@@ -13,7 +29,14 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const { email, password } = await req.json();
+    const { email, password, recaptchaToken } = await req.json();
+
+    if (recaptchaToken) {
+      const valid = await verifyRecaptcha(recaptchaToken);
+      if (!valid) {
+        return NextResponse.json({ error: "Verifikasi reCAPTCHA gagal. Silakan coba lagi." }, { status: 400 });
+      }
+    }
 
     if (!email || !password) {
       return NextResponse.json({ error: "Email dan password wajib diisi" }, { status: 400 });

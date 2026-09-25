@@ -1,8 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import ReCAPTCHA, { ReCAPTCHAHandle } from "@/components/ReCAPTCHA";
+
+const SITE_KEY = process.env.NEXT_PUBLIC_GOOGLE_RECAPTCHA_SITE_KEY ?? "";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -11,19 +14,30 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const recaptchaRef = useRef<ReCAPTCHAHandle>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setLoading(true);
     try {
+      let recaptchaToken = "";
+      if (SITE_KEY && recaptchaRef.current) {
+        recaptchaToken = await recaptchaRef.current.getToken();
+        if (!recaptchaToken) {
+          setError("Verifikasi reCAPTCHA belum selesai. Silakan coba lagi.");
+          setLoading(false);
+          return;
+        }
+      }
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password, recaptchaToken }),
       });
       const data = await res.json();
       if (!res.ok) {
+        if (recaptchaRef.current) recaptchaRef.current.reset();
         setError(data.error || "Login gagal");
       } else {
         router.push("/dashboard");
@@ -76,6 +90,11 @@ export default function LoginPage() {
               </button>
             </div>
           </div>
+          {SITE_KEY && (
+            <div className="flex justify-center">
+              <ReCAPTCHA ref={recaptchaRef} siteKey={SITE_KEY} theme="light" />
+            </div>
+          )}
           <button type="submit" disabled={loading}
             className="w-full py-3 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition disabled:opacity-50">
             {loading ? "Memuat..." : "Login"}
